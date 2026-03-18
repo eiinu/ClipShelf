@@ -11,7 +11,7 @@
     "typecheck": "vue-tsc --noEmit",
     "build:web": "vite build",
     "build:desktop": "pnpm run build && pnpm run tauri build",
-    "bundle:dmg": "pnpm run build && pnpm run tauri build -- --bundles dmg"
+    "bundle:dmg": "pnpm run build && pnpm run tauri build --bundles dmg"
   },
   "dependencies": {
     "@codemirror/lang-html": "^6.4.11",
