@@ -58,7 +58,7 @@ jobs:
         run: pnpm install
 
       - name: Build and publish DMG to GitHub Release
-        uses: tauri-apps/tauri-action@v1
+        uses: tauri-apps/tauri-action@v0
         with:
           tagName: v__VERSION__
           releaseName: 'ClipShelf v__VERSION__'
