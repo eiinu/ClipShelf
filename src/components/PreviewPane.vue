@@ -51,22 +51,22 @@ defineProps<{
 
 <style scoped>
 .preview-panel {
-  padding: 22px;
+  padding: 16px;
   display: grid;
   grid-template-rows: auto 1fr;
-  gap: 18px;
+  gap: 16px;
   min-height: 0;
 }
 .header p,
 .header h2 { margin: 0; }
-.header p { color: #94a3b8; margin-bottom: 6px; font-size: 14px; }
-.header h2 { font-size: 24px; }
+.header p { color: #64748b; margin-bottom: 6px; font-size: 14px; }
+.header h2 { font-size: 20px; font-weight: 600; color: #1e293b; }
 .image-viewer,
 .empty-state {
   min-height: 0;
-  border-radius: 24px;
-  border: 1px solid rgba(148, 163, 184, 0.16);
-  background: rgba(15, 23, 42, 0.92);
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
 }
 .image-viewer {
   display: grid;
@@ -78,12 +78,14 @@ defineProps<{
   max-width: 100%;
   max-height: 100%;
   object-fit: contain;
-  border-radius: 18px;
-  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.5);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 .empty-state {
   display: grid;
   place-items: center;
-  color: #94a3b8;
+  color: #64748b;
+  font-size: 14px;
+  padding: 24px;
 }
 </style>

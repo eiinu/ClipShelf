@@ -80,7 +80,7 @@ const kindLabel: Record<ClipItem['kind'], string> = {
 
 <style scoped>
 .panel {
-  padding: 18px;
+  padding: 16px;
   display: grid;
   grid-template-rows: auto 1fr;
   gap: 16px;
@@ -88,24 +88,28 @@ const kindLabel: Record<ClipItem['kind'], string> = {
 }
 .panel-header p,
 .panel-header h2 { margin: 0; }
-.panel-header p { color: #94a3b8; font-size: 14px; margin-bottom: 6px; }
-.panel-header h2 { font-size: 24px; }
+.panel-header p { color: #64748b; font-size: 14px; margin-bottom: 6px; }
+.panel-header h2 { font-size: 20px; font-weight: 600; color: #1e293b; }
 .list {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 12px;
   overflow: auto;
 }
 .card {
-  padding: 14px;
-  border-radius: 20px;
-  background: rgba(30, 41, 59, 0.78);
-  border: 1px solid transparent;
+  padding: 16px;
+  border-radius: 12px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
   cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.card:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 .card.active {
-  border-color: rgba(96, 165, 250, 0.5);
-  box-shadow: inset 0 0 0 1px rgba(96, 165, 250, 0.18);
+  border-color: #94a3b8;
+  box-shadow: 0 0 0 3px rgba(148, 163, 184, 0.1);
 }
 .card-top,
 .meta {
@@ -122,53 +126,60 @@ const kindLabel: Record<ClipItem['kind'], string> = {
 }
 .kind,
 .pin-badge {
-  padding: 6px 10px;
+  padding: 4px 8px;
   border-radius: 999px;
   font-size: 12px;
+  font-weight: 500;
 }
 .kind {
-  background: rgba(59, 130, 246, 0.18);
-  color: #bfdbfe;
+  background: #f1f5f9;
+  color: #475569;
 }
 .pin-badge {
-  background: rgba(244, 114, 182, 0.18);
-  color: #fbcfe8;
+  background: #fef3c7;
+  color: #92400e;
 }
 .favorite {
   border: none;
   background: transparent;
-  color: #f8fafc;
-  font-size: 20px;
+  color: #64748b;
+  font-size: 18px;
   cursor: pointer;
+  transition: color 0.2s ease;
+}
+.favorite:hover {
+  color: #1e293b;
 }
 .preview-box {
-  margin: 14px 0;
-  min-height: 120px;
-  max-height: 160px;
+  margin: 12px 0;
+  min-height: 100px;
+  max-height: 140px;
   overflow: hidden;
-  border-radius: 16px;
-  background: rgba(15, 23, 42, 0.92);
-  border: 1px solid rgba(148, 163, 184, 0.12);
+  border-radius: 8px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
 }
 .preview-box img {
   width: 100%;
-  height: 160px;
+  height: 140px;
   object-fit: cover;
   display: block;
 }
 .preview-box pre {
   margin: 0;
-  padding: 14px;
+  padding: 12px;
   white-space: pre-wrap;
   word-break: break-word;
   font-family: 'SFMono-Regular', ui-monospace, monospace;
-  color: #dbeafe;
+  color: #475569;
+  font-size: 14px;
 }
 .meta strong {
   font-size: 14px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  color: #1e293b;
 }
 .meta span {
   color: #94a3b8;
@@ -179,7 +190,8 @@ const kindLabel: Record<ClipItem['kind'], string> = {
   display: grid;
   place-items: center;
   text-align: center;
-  color: #94a3b8;
+  color: #64748b;
   padding: 24px;
+  font-size: 14px;
 }
 </style>

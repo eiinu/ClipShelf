@@ -26,7 +26,7 @@ const extensions = computed(() => {
       '&': {
         height: '100%',
         backgroundColor: 'transparent',
-        color: '#e2e8f0',
+        color: '#475569',
         fontSize: '14px',
       },
       '.cm-scroller': {
@@ -35,28 +35,28 @@ const extensions = computed(() => {
         lineHeight: '1.6',
       },
       '.cm-content': {
-        padding: '18px',
+        padding: '16px',
       },
       '.cm-gutters': {
-        backgroundColor: 'rgba(15, 23, 42, 0.78)',
-        color: '#64748b',
+        backgroundColor: '#f1f5f9',
+        color: '#94a3b8',
         border: 'none',
       },
       '.cm-activeLine': {
-        backgroundColor: 'rgba(59, 130, 246, 0.08)',
+        backgroundColor: 'rgba(148, 163, 184, 0.1)',
       },
       '.cm-activeLineGutter': {
-        backgroundColor: 'transparent',
+        backgroundColor: '#f1f5f9',
       },
       '.cm-selectionBackground, &.cm-focused .cm-selectionBackground': {
-        backgroundColor: 'rgba(96, 165, 250, 0.24)',
+        backgroundColor: 'rgba(148, 163, 184, 0.2)',
       },
       '.cm-cursor, .cm-dropCursor': {
-        borderLeftColor: '#93c5fd',
+        borderLeftColor: '#64748b',
       },
       '.cm-panels': {
-        backgroundColor: 'rgba(15, 23, 42, 0.94)',
-        color: '#cbd5e1',
+        backgroundColor: '#f8fafc',
+        color: '#475569',
       },
     }),
   ];
@@ -106,30 +106,31 @@ onBeforeUnmount(() => {
   display: grid;
   grid-template-rows: auto 1fr;
   min-height: 0;
-  border-radius: 22px;
+  border-radius: 8px;
   overflow: hidden;
-  border: 1px solid rgba(148, 163, 184, 0.16);
-  background: rgba(15, 23, 42, 0.92);
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
 }
 .toolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 16px;
-  background: rgba(30, 41, 59, 0.92);
-  color: #94a3b8;
+  padding: 10px 16px;
+  background: #f1f5f9;
+  color: #64748b;
   font-size: 13px;
+  border-bottom: 1px solid #e2e8f0;
 }
-.traffic { display: inline-flex; gap: 8px; }
+.traffic { display: inline-flex; gap: 6px; }
 .traffic i {
-  width: 10px;
-  height: 10px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   display: block;
 }
-.traffic i:nth-child(1) { background: #fb7185; }
-.traffic i:nth-child(2) { background: #fbbf24; }
-.traffic i:nth-child(3) { background: #4ade80; }
+.traffic i:nth-child(1) { background: #ef4444; }
+.traffic i:nth-child(2) { background: #f59e0b; }
+.traffic i:nth-child(3) { background: #10b981; }
 .editor-host {
   min-height: 0;
   height: 100%;
