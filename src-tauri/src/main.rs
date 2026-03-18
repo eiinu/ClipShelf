@@ -1,8 +1,5 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use std::process::Command;
-
-use base64::{engine::general_purpose::STANDARD, Engine as _};
 use serde::Serialize;
 
 #[derive(Debug, Serialize)]
@@ -47,8 +44,9 @@ fn read_clipboard_snapshot() -> Result<Option<ClipboardPayload>, String> {
 
 #[cfg(target_os = "macos")]
 mod macos {
-    use super::{ClipKind, ClipboardPayload, Command, STANDARD};
-    use base64::Engine as _;
+    use super::{ClipKind, ClipboardPayload};
+    use base64::{engine::general_purpose::STANDARD, Engine as _};
+    use std::process::Command;
 
     pub fn read_clipboard_snapshot() -> Result<Option<ClipboardPayload>, String> {
         if let Some(image) = pbpaste_bytes("png")? {
