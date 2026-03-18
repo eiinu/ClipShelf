@@ -135,7 +135,7 @@ mod macos {
     pub fn read_clipboard_snapshot(
         last_change_count: &Mutex<Option<i64>>,
     ) -> Result<Option<ClipboardPayload>, String> {
-        let pasteboard = unsafe { NSPasteboard::generalPasteboard() };
+        let pasteboard = NSPasteboard::generalPasteboard();
         let change_count = pasteboard.changeCount() as i64;
 
         {
@@ -150,7 +150,7 @@ mod macos {
             *last_seen = Some(change_count);
         }
 
-        if let Some(image) = pasteboard_data(&pasteboard, NSPasteboardTypePNG) {
+        if let Some(image) = pasteboard_data(&pasteboard, unsafe { &NSPasteboardTypePNG }) {
             return Ok(Some(ClipboardPayload {
                 kind: ClipKind::Image,
                 title: "PNG image".into(),
@@ -162,7 +162,7 @@ mod macos {
             }));
         }
 
-        if let Some(html) = pasteboard_string(&pasteboard, NSPasteboardTypeHTML) {
+        if let Some(html) = pasteboard_string(&pasteboard, unsafe { &NSPasteboardTypeHTML }) {
             let preview = html
                 .replace('\n', " ")
                 .chars()
@@ -179,7 +179,7 @@ mod macos {
             }));
         }
 
-        if let Some(text) = pasteboard_string(&pasteboard, NSPasteboardTypeString) {
+        if let Some(text) = pasteboard_string(&pasteboard, unsafe { &NSPasteboardTypeString }) {
             let preview = text.chars().take(180).collect::<String>();
             return Ok(Some(ClipboardPayload {
                 kind: ClipKind::Text,
@@ -210,10 +210,7 @@ mod macos {
     }
 
     fn data_to_vec(data: Retained<NSData>) -> Vec<u8> {
-        unsafe {
-            let bytes = std::slice::from_raw_parts(data.bytes().cast::<u8>(), data.length());
-            bytes.to_vec()
-        }
+        data.to_vec()
     }
 
     fn first_line(content: &str, fallback: &str) -> String {
