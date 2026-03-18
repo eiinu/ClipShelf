@@ -1,0 +1,71 @@
+name: release-dmg
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_draft:
+        description: 'Create the GitHub Release as a draft'
+        required: false
+        default: true
+        type: boolean
+      prerelease:
+        description: 'Mark the GitHub Release as a pre-release'
+        required: false
+        default: false
+        type: boolean
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release-dmg:
+    runs-on: macos-latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      TAURI_BUNDLER_DMG_IGNORE_CI: 'true'
+      APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+      APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+      APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+      APPLE_ID: ${{ secrets.APPLE_ID }}
+      APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            src-tauri -> target
+
+      - name: Install frontend dependencies
+        run: pnpm install
+
+      - name: Build and publish DMG to GitHub Release
+        uses: tauri-apps/tauri-action@v1
+        with:
+          tagName: v__VERSION__
+          releaseName: 'ClipShelf v__VERSION__'
+          releaseBody: 'Automated DMG release for ClipShelf. Download the attached .dmg artifact to install.'
+          releaseDraft: ${{ github.event_name == 'workflow_dispatch' && inputs.release_draft || 'false' }}
+          prerelease: ${{ github.event_name == 'workflow_dispatch' && inputs.prerelease || 'false' }}
+          includeDebug: false
+          uploadPlainBinary: false
+          releaseAssetNamePattern: '[name]_[version]_[arch].[ext]'
+          args: '--bundles dmg'
