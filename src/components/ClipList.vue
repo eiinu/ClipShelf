@@ -5,6 +5,7 @@ interface ClipItem {
   preview: string;
   kind: 'text' | 'html' | 'image';
   favorite: boolean;
+  pinned: boolean;
   image_data_url?: string | null;
   createdAt: string;
 }
@@ -17,6 +18,7 @@ defineProps<{
 const emit = defineEmits<{
   (e: 'select', id: string): void;
   (e: 'toggle-favorite', id: string): void;
+  (e: 'toggle-pinned', id: string): void;
 }>();
 
 const kindLabel: Record<ClipItem['kind'], string> = {
@@ -44,10 +46,18 @@ const kindLabel: Record<ClipItem['kind'], string> = {
         @click="emit('select', item.id)"
       >
         <div class="card-top">
-          <span class="kind">{{ kindLabel[item.kind] }}</span>
-          <button class="favorite" @click.stop="emit('toggle-favorite', item.id)">
-            {{ item.favorite ? '★' : '☆' }}
-          </button>
+          <div class="badges">
+            <span class="kind">{{ kindLabel[item.kind] }}</span>
+            <span v-if="item.pinned" class="pin-badge">置顶</span>
+          </div>
+          <div class="actions">
+            <button class="favorite" :title="item.pinned ? '取消置顶' : '置顶到顶部'" @click.stop="emit('toggle-pinned', item.id)">
+              {{ item.pinned ? '📌' : '📍' }}
+            </button>
+            <button class="favorite" :title="item.favorite ? '取消收藏' : '加入收藏'" @click.stop="emit('toggle-favorite', item.id)">
+              {{ item.favorite ? '★' : '☆' }}
+            </button>
+          </div>
         </div>
 
         <div class="preview-box">
@@ -63,7 +73,7 @@ const kindLabel: Record<ClipItem['kind'], string> = {
     </div>
 
     <div v-else class="empty">
-      复制任意文本、HTML 或图片后，这里会自动收集最新内容。
+      当前筛选条件下没有结果。你可以复制任意文本、HTML 或图片，或者调整搜索词试试。
     </div>
   </section>
 </template>
@@ -104,12 +114,25 @@ const kindLabel: Record<ClipItem['kind'], string> = {
   align-items: center;
   gap: 12px;
 }
-.kind {
+.badges,
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.kind,
+.pin-badge {
   padding: 6px 10px;
   border-radius: 999px;
+  font-size: 12px;
+}
+.kind {
   background: rgba(59, 130, 246, 0.18);
   color: #bfdbfe;
-  font-size: 12px;
+}
+.pin-badge {
+  background: rgba(244, 114, 182, 0.18);
+  color: #fbcfe8;
 }
 .favorite {
   border: none;

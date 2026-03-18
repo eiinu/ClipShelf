@@ -22,6 +22,7 @@ interface ClipItem extends ClipboardPayload {
   id: string;
   createdAt: string;
   favorite: boolean;
+  pinned: boolean;
 }
 
 const tabs: Array<{ key: ClipTab; label: string; emoji: string }> = [
@@ -35,18 +36,42 @@ const tabs: Array<{ key: ClipTab; label: string; emoji: string }> = [
 const activeTab = ref<ClipTab>('default');
 const clips = ref<ClipItem[]>([]);
 const selectedId = ref<string | null>(null);
-const pollingError = ref<string>('');
+const pollingError = ref('');
+const storageError = ref('');
+const searchQuery = ref('');
+const storageReady = ref(false);
 let timer: number | undefined;
 
+const compareClips = (left: ClipItem, right: ClipItem) => {
+  if (left.pinned !== right.pinned) return Number(right.pinned) - Number(left.pinned);
+  return new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime();
+};
+
+const normalizedQuery = computed(() => searchQuery.value.trim().toLowerCase());
+
 const filteredClips = computed(() => {
-  if (activeTab.value === 'default') return clips.value;
-  if (activeTab.value === 'favorites') return clips.value.filter((clip) => clip.favorite);
-  return clips.value.filter((clip) => clip.kind === activeTab.value);
+  const byTab =
+    activeTab.value === 'default'
+      ? clips.value
+      : activeTab.value === 'favorites'
+        ? clips.value.filter((clip) => clip.favorite)
+        : clips.value.filter((clip) => clip.kind === activeTab.value);
+
+  const byQuery = !normalizedQuery.value
+    ? byTab
+    : byTab.filter((clip) => {
+        const haystacks = [clip.title, clip.preview, clip.text ?? '', clip.html ?? '', clip.source];
+        return haystacks.some((value) => value.toLowerCase().includes(normalizedQuery.value));
+      });
+
+  return [...byQuery].sort(compareClips);
 });
 
 const selectedClip = computed(
   () => filteredClips.value.find((clip) => clip.id === selectedId.value) ?? filteredClips.value[0] ?? null,
 );
+
+const pinnedCount = computed(() => clips.value.filter((clip) => clip.pinned).length);
 
 const fingerprint = (payload: ClipboardPayload) =>
   [payload.kind, payload.text ?? '', payload.html ?? '', payload.image_data_url ?? ''].join('::');
@@ -54,6 +79,29 @@ const fingerprint = (payload: ClipboardPayload) =>
 const ensureSelection = () => {
   if (!selectedClip.value && filteredClips.value[0]) {
     selectedId.value = filteredClips.value[0].id;
+  }
+};
+
+const loadSavedClips = async () => {
+  try {
+    const saved = await invoke<ClipItem[]>('load_saved_clips');
+    clips.value = [...saved].sort(compareClips);
+    selectedId.value = clips.value[0]?.id ?? null;
+    storageError.value = '';
+  } catch (error) {
+    storageError.value = error instanceof Error ? error.message : String(error);
+  } finally {
+    storageReady.value = true;
+    ensureSelection();
+  }
+};
+
+const saveClips = async (nextClips: ClipItem[]) => {
+  try {
+    await invoke('save_clips', { clips: nextClips });
+    storageError.value = '';
+  } catch (error) {
+    storageError.value = error instanceof Error ? error.message : String(error);
   }
 };
 
@@ -72,10 +120,13 @@ const pollClipboard = async () => {
         ...payload,
         id,
         favorite: false,
+        pinned: false,
         createdAt: new Date().toISOString(),
       },
       ...clips.value,
-    ].slice(0, 100);
+    ]
+      .slice(0, 100)
+      .sort(compareClips);
 
     selectedId.value = id;
   } catch (error) {
@@ -91,15 +142,37 @@ const toggleFavorite = (id: string) => {
   );
 };
 
-watch(filteredClips, (next) => {
-  if (!next.some((clip) => clip.id === selectedId.value)) {
-    selectedId.value = next[0]?.id ?? null;
-  }
-});
+const togglePinned = (id: string) => {
+  clips.value = clips.value
+    .map((clip) => (clip.id === id ? { ...clip, pinned: !clip.pinned } : clip))
+    .sort(compareClips);
+};
+
+watch(
+  filteredClips,
+  (next) => {
+    if (!next.some((clip) => clip.id === selectedId.value)) {
+      selectedId.value = next[0]?.id ?? null;
+    }
+  },
+  { deep: true },
+);
+
+watch(
+  clips,
+  (nextClips) => {
+    if (!storageReady.value) return;
+    void saveClips(nextClips);
+  },
+  { deep: true },
+);
 
 onMounted(async () => {
+  await loadSavedClips();
   await pollClipboard();
-  timer = window.setInterval(pollClipboard, 1200);
+  timer = window.setInterval(() => {
+    void pollClipboard();
+  }, 1200);
 });
 
 onBeforeUnmount(() => {
@@ -114,9 +187,15 @@ onBeforeUnmount(() => {
         <p class="eyebrow">macOS clipboard desk</p>
         <h1>ClipShelf</h1>
       </div>
-      <div class="status">
-        <span class="dot" />
-        轮询中 · {{ clips.length }} 条记录
+      <div class="toolbar-group">
+        <label class="search">
+          <span>搜索</span>
+          <input v-model="searchQuery" type="search" placeholder="标题、内容、来源…" />
+        </label>
+        <div class="status">
+          <span class="dot" />
+          监听中 · {{ clips.length }} 条记录 · {{ pinnedCount }} 条置顶
+        </div>
       </div>
     </header>
 
@@ -127,13 +206,14 @@ onBeforeUnmount(() => {
         :selected-id="selectedClip?.id ?? null"
         @select="selectedId = $event"
         @toggle-favorite="toggleFavorite"
+        @toggle-pinned="togglePinned"
       />
       <PreviewPane :clip="selectedClip" />
     </section>
 
     <footer class="footer">
-      <span>当前仅实现 macOS demo：通过系统命令读取文本 / HTML / PNG 剪贴板内容。</span>
-      <span v-if="pollingError" class="error">{{ pollingError }}</span>
+      <span>文本 / HTML 详情现已基于 CodeMirror 预览，并自动持久化到本地存储。</span>
+      <span v-if="storageError || pollingError" class="error">{{ storageError || pollingError }}</span>
     </footer>
   </main>
 </template>
@@ -169,6 +249,7 @@ onBeforeUnmount(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 16px;
 }
 .eyebrow {
   margin: 0 0 8px;
@@ -178,6 +259,29 @@ onBeforeUnmount(() => {
   font-size: 12px;
 }
 h1 { margin: 0; font-size: 32px; }
+.toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.search {
+  display: grid;
+  gap: 6px;
+  color: #94a3b8;
+  font-size: 12px;
+}
+.search input {
+  width: min(320px, 48vw);
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  background: rgba(15, 23, 42, 0.92);
+  color: #e2e8f0;
+  outline: none;
+}
+.search input::placeholder { color: #64748b; }
 .status {
   display: inline-flex;
   align-items: center;
@@ -218,6 +322,18 @@ h1 { margin: 0; font-size: 32px; }
 @media (max-width: 1180px) {
   .layout {
     grid-template-columns: 88px minmax(260px, 320px) 1fr;
+  }
+}
+
+@media (max-width: 860px) {
+  .topbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .toolbar-group,
+  .search input {
+    width: 100%;
   }
 }
 </style>

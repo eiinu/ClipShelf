@@ -29,11 +29,13 @@ defineProps<{
       <CodeEditor
         v-if="clip.kind === 'text'"
         :model-value="clip.text ?? ''"
+        language="text"
         language-label="Plain Text"
       />
       <CodeEditor
         v-else-if="clip.kind === 'html'"
         :model-value="clip.html ?? ''"
+        language="html"
         language-label="HTML"
       />
       <div v-else class="image-viewer">

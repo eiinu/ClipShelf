@@ -113,7 +113,7 @@ git push origin HEAD --tags
 
 ## Next steps
 
-- 使用 macOS pasteboard API 替代轮询 shell 命令，提高准确率和性能。
-- 引入持久化存储（SQLite）。
-- 接入真正的 CodeMirror 6 组件。
-- 加入全局快捷键、搜索、固定置顶等功能。
+- 继续完善 macOS pasteboard API 方案，例如加入更丰富的类型识别与事件驱动监听。
+- 持久化存储已可用，后续可升级为 SQLite 以支持更复杂的查询与索引。
+- 继续增强 CodeMirror 预览体验，例如主题切换、语法高亮细分与只读工具栏。
+- 加入全局快捷键等功能，并继续完善搜索 / 置顶 / 状态栏交互体验。
