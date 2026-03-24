@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
+import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 import SidebarTabs from './components/SidebarTabs.vue';
 import ClipList from './components/ClipList.vue';
 import PreviewPane from './components/PreviewPane.vue';
@@ -36,11 +37,12 @@ const tabs: Array<{ key: ClipTab; label: string; emoji: string }> = [
 const activeTab = ref<ClipTab>('default');
 const clips = ref<ClipItem[]>([]);
 const selectedId = ref<string | null>(null);
-const pollingError = ref('');
+const listenerError = ref('');
 const storageError = ref('');
 const searchQuery = ref('');
 const storageReady = ref(false);
-let timer: number | undefined;
+let unlistenClipboard: UnlistenFn | null = null;
+let unlistenError: UnlistenFn | null = null;
 
 const compareClips = (left: ClipItem, right: ClipItem) => {
   if (left.pinned !== right.pinned) return Number(right.pinned) - Number(left.pinned);
@@ -82,6 +84,27 @@ const ensureSelection = () => {
   }
 };
 
+const pushClip = (payload: ClipboardPayload) => {
+  const id = fingerprint(payload);
+  if (clips.value.some((clip) => clip.id === id)) return;
+
+  clips.value = [
+    {
+      ...payload,
+      id,
+      favorite: false,
+      pinned: false,
+      createdAt: new Date().toISOString(),
+    },
+    ...clips.value,
+  ]
+    .slice(0, 100)
+    .sort(compareClips);
+
+  selectedId.value = id;
+  ensureSelection();
+};
+
 const loadSavedClips = async () => {
   try {
     const saved = await invoke<ClipItem[]>('load_saved_clips');
@@ -105,34 +128,32 @@ const saveClips = async (nextClips: ClipItem[]) => {
   }
 };
 
-const pollClipboard = async () => {
+const setupClipboardListener = async () => {
+  unlistenClipboard = await listen<ClipboardPayload>('clipboard-updated', (event) => {
+    listenerError.value = '';
+    if (event.payload) pushClip(event.payload);
+  });
+
+  unlistenError = await listen<string>('clipboard-listener-error', (event) => {
+    listenerError.value = event.payload;
+  });
+
   try {
-    const payload = await invoke<ClipboardPayload | null>('read_clipboard_snapshot');
-    pollingError.value = '';
-
-    if (!payload) return;
-
-    const id = fingerprint(payload);
-    if (clips.value.some((clip) => clip.id === id)) return;
-
-    clips.value = [
-      {
-        ...payload,
-        id,
-        favorite: false,
-        pinned: false,
-        createdAt: new Date().toISOString(),
-      },
-      ...clips.value,
-    ]
-      .slice(0, 100)
-      .sort(compareClips);
-
-    selectedId.value = id;
+    await invoke('start_clipboard_listener');
   } catch (error) {
-    pollingError.value = error instanceof Error ? error.message : String(error);
-  } finally {
-    ensureSelection();
+    listenerError.value = error instanceof Error ? error.message : String(error);
+  }
+};
+
+const teardownClipboardListener = async () => {
+  if (unlistenClipboard) {
+    unlistenClipboard();
+    unlistenClipboard = null;
+  }
+
+  if (unlistenError) {
+    unlistenError();
+    unlistenError = null;
   }
 };
 
@@ -169,14 +190,11 @@ watch(
 
 onMounted(async () => {
   await loadSavedClips();
-  await pollClipboard();
-  timer = window.setInterval(() => {
-    void pollClipboard();
-  }, 1200);
+  await setupClipboardListener();
 });
 
 onBeforeUnmount(() => {
-  if (timer) window.clearInterval(timer);
+  void teardownClipboardListener();
 });
 </script>
 
@@ -205,7 +223,7 @@ onBeforeUnmount(() => {
         <PreviewPane :clip="selectedClip" />
       </section>
 
-      <footer v-if="storageError || pollingError" class="footer error">{{ storageError || pollingError }}</footer>
+      <footer v-if="storageError || listenerError" class="footer error">{{ storageError || listenerError }}</footer>
     </main>
   </div>
 </template>
@@ -225,7 +243,7 @@ onBeforeUnmount(() => {
   background: #f8fafc;
   color: #1e293b;
 }
-:global(button), :global(input), :global(textarea) { font: inherit; }
+:global(button), :global(input), :global(textarea), :global(select) { font: inherit; }
 
 .app-frame {
   width: 100vw;
@@ -235,14 +253,14 @@ onBeforeUnmount(() => {
   justify-content: center;
 }
 .shell {
-  width: 50vw;
-  min-width: 760px;
-  max-width: 980px;
+  width: 46vw;
+  min-width: 700px;
+  max-width: 900px;
   height: 100vh;
-  padding: 24px 16px;
+  padding: 14px;
   display: grid;
   grid-template-rows: auto 1fr auto;
-  gap: 16px;
+  gap: 14px;
   overflow: hidden;
 }
 .topbar,
@@ -259,69 +277,47 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 16px;
 }
-h1 { margin: 0; font-size: 20px; font-weight: 600; color: #1e293b; }
+.topbar h1 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  color: #0f172a;
+}
 .toolbar-group {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
 }
 .search input {
-  width: min(260px, 40vw);
-  padding: 8px 10px;
+  width: 220px;
+  border: 1px solid #cbd5e1;
   border-radius: 8px;
-  border: 1px solid #e2e8f0;
-  background: #ffffff;
-  color: #1e293b;
+  padding: 8px 10px;
   outline: none;
+  background: #f8fafc;
 }
 .search input:focus {
-  border-color: #94a3b8;
+  border-color: #64748b;
+  box-shadow: 0 0 0 3px rgba(100, 116, 139, 0.15);
 }
-.search input::placeholder { color: #94a3b8; }
 .status {
-  display: inline-flex;
-  align-items: center;
-  padding: 8px 12px;
-  border-radius: 999px;
-  background: #f1f5f9;
+  font-size: 13px;
+  font-weight: 600;
   color: #64748b;
-  font-size: 12px;
 }
 .layout {
+  min-height: 0;
   display: grid;
-  grid-template-columns: 132px minmax(220px, 280px) 1fr;
-  gap: 12px;
-  min-height: 0;
-  overflow: hidden;
-}
-.layout > * {
-  min-height: 0;
-  height: 100%;
-  overflow: hidden;
+  grid-template-columns: 84px minmax(220px, 1fr) minmax(280px, 1.15fr);
+  gap: 14px;
 }
 .footer {
-  padding: 8px 12px;
-  color: #64748b;
-  font-size: 12px;
+  padding: 10px 14px;
+  font-size: 13px;
 }
-.error { color: #ef4444; }
-
-@media (max-width: 1500px) {
-  .shell {
-    width: min(980px, 100vw);
-    min-width: 0;
-  }
-}
-
-@media (max-width: 860px) {
-  .topbar {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-  .toolbar-group,
-  .search input {
-    width: 100%;
-  }
+.error {
+  color: #b91c1c;
+  border-color: #fecaca;
+  background: #fef2f2;
 }
 </style>

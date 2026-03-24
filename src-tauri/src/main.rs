@@ -5,7 +5,7 @@ use std::{fs, path::PathBuf, sync::Mutex};
 use tauri::{
     menu::{MenuBuilder, MenuItemBuilder},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
-    AppHandle, Manager, State, WindowEvent,
+    AppHandle, Emitter, Manager, State, WindowEvent,
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -45,7 +45,7 @@ struct StoredClip {
 
 #[derive(Default)]
 struct ClipboardRuntimeState {
-    last_change_count: Mutex<Option<i64>>,
+    listener_started: Mutex<bool>,
 }
 
 #[tauri::command]
@@ -78,39 +78,38 @@ fn save_clips(app: AppHandle, clips: Vec<StoredClip>) -> Result<(), String> {
 }
 
 #[tauri::command]
-fn read_clipboard_snapshot(
+fn start_clipboard_listener(
+    app: AppHandle,
     state: State<ClipboardRuntimeState>,
-) -> Result<Option<ClipboardPayload>, String> {
+) -> Result<(), String> {
+    {
+        let mut started = state
+            .listener_started
+            .lock()
+            .map_err(|_| "failed to lock listener state".to_string())?;
+
+        if *started {
+            return Ok(());
+        }
+
+        *started = true;
+    }
+
     #[cfg(target_os = "macos")]
     {
-        return macos::read_clipboard_snapshot(&state.last_change_count);
+        macos::start_clipboard_listener(app);
     }
 
     #[cfg(not(target_os = "macos"))]
     {
-        let mut last_change_count = state
-            .last_change_count
-            .lock()
-            .map_err(|_| "failed to lock clipboard state".to_string())?;
-
-        if last_change_count.is_some() {
-            return Ok(None);
-        }
-
-        *last_change_count = Some(1);
-        Ok(Some(ClipboardPayload {
-            kind: ClipKind::Text,
-            title: "macOS only demo".into(),
-            preview: "This demo currently uses the macOS pasteboard API for clipboard capture."
-                .into(),
-            text: Some(
-                "Run ClipShelf on macOS to enable live clipboard capture and tray behavior.".into(),
-            ),
-            html: None,
-            image_data_url: None,
-            source: "fallback".into(),
-        }))
+        app.emit(
+            "clipboard-listener-error",
+            "当前版本仅在 macOS 上启用了原生剪贴板监听。",
+        )
+        .map_err(|err| format!("failed to emit fallback listener message: {err}"))?;
     }
+
+    Ok(())
 }
 
 fn storage_file_path(app: &AppHandle) -> Result<PathBuf, String> {
@@ -130,27 +129,32 @@ mod macos {
         NSPasteboard, NSPasteboardTypeHTML, NSPasteboardTypePNG, NSPasteboardTypeString,
     };
     use objc2_foundation::{NSData, NSString};
-    use std::sync::Mutex;
+    use std::{thread, time::Duration};
+    use tauri::{AppHandle, Emitter};
 
-    pub fn read_clipboard_snapshot(
-        last_change_count: &Mutex<Option<i64>>,
-    ) -> Result<Option<ClipboardPayload>, String> {
-        let pasteboard = NSPasteboard::generalPasteboard();
-        let change_count = pasteboard.changeCount() as i64;
+    pub fn start_clipboard_listener(app: AppHandle) {
+        thread::spawn(move || {
+            let pasteboard = NSPasteboard::generalPasteboard();
+            let mut last_seen = pasteboard.changeCount() as i64;
 
-        {
-            let mut last_seen = last_change_count
-                .lock()
-                .map_err(|_| "failed to lock macOS pasteboard state".to_string())?;
+            loop {
+                let change_count = pasteboard.changeCount() as i64;
 
-            if last_seen.as_ref() == Some(&change_count) {
-                return Ok(None);
+                if change_count != last_seen {
+                    last_seen = change_count;
+
+                    if let Ok(Some(payload)) = read_payload(&pasteboard) {
+                        let _ = app.emit("clipboard-updated", payload);
+                    }
+                }
+
+                thread::sleep(Duration::from_millis(300));
             }
+        });
+    }
 
-            *last_seen = Some(change_count);
-        }
-
-        if let Some(image) = pasteboard_data(&pasteboard, unsafe { &NSPasteboardTypePNG }) {
+    fn read_payload(pasteboard: &NSPasteboard) -> Result<Option<ClipboardPayload>, String> {
+        if let Some(image) = pasteboard_data(pasteboard, unsafe { &NSPasteboardTypePNG }) {
             return Ok(Some(ClipboardPayload {
                 kind: ClipKind::Image,
                 title: "PNG image".into(),
@@ -162,7 +166,7 @@ mod macos {
             }));
         }
 
-        if let Some(html) = pasteboard_string(&pasteboard, unsafe { &NSPasteboardTypeHTML }) {
+        if let Some(html) = pasteboard_string(pasteboard, unsafe { &NSPasteboardTypeHTML }) {
             let preview = html
                 .replace('\n', " ")
                 .chars()
@@ -179,7 +183,7 @@ mod macos {
             }));
         }
 
-        if let Some(text) = pasteboard_string(&pasteboard, unsafe { &NSPasteboardTypeString }) {
+        if let Some(text) = pasteboard_string(pasteboard, unsafe { &NSPasteboardTypeString }) {
             let preview = text.chars().take(180).collect::<String>();
             return Ok(Some(ClipboardPayload {
                 kind: ClipKind::Text,
@@ -281,11 +285,7 @@ fn main() {
 
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![
-            read_clipboard_snapshot,
-            load_saved_clips,
-            save_clips
-        ])
+        .invoke_handler(tauri::generate_handler![start_clipboard_listener, load_saved_clips, save_clips])
         .run(tauri::generate_context!())
         .expect("error while running ClipShelf");
 }
