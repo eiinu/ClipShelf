@@ -85,6 +85,27 @@ const ensureSelection = () => {
 };
 
 const pushClip = (payload: ClipboardPayload) => {
+  // 处理同时包含 text 和 html 的情况
+  if (payload.kind === 'html' && payload.text) {
+    // 创建纯文本版本
+    const textId = fingerprint({ ...payload, kind: 'text', html: null });
+    if (!clips.value.some((clip) => clip.id === textId)) {
+      clips.value = [
+        {
+          ...payload,
+          id: textId,
+          kind: 'text',
+          html: null,
+          favorite: false,
+          pinned: false,
+          createdAt: new Date().toISOString(),
+        },
+        ...clips.value,
+      ];
+    }
+  }
+
+  // 创建原始版本
   const id = fingerprint(payload);
   if (clips.value.some((clip) => clip.id === id)) return;
 
