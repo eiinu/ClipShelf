@@ -13,10 +13,10 @@
     "windows": [
       {
         "title": "ClipShelf",
-        "width": 1500,
-        "height": 920,
-        "minWidth": 1200,
-        "minHeight": 760,
+        "width": 1280,
+        "height": 860,
+        "minWidth": 760,
+        "minHeight": 560,
         "resizable": true,
         "fullscreen": false
       }

@@ -246,17 +246,18 @@ onBeforeUnmount(() => {
 :global(button), :global(input), :global(textarea), :global(select) { font: inherit; }
 
 .app-frame {
-  width: 100vw;
-  height: 100vh;
+  width: 100%;
+  height: 100%;
   overflow: hidden;
   display: flex;
-  justify-content: center;
+  justify-content: stretch;
 }
 .shell {
-  width: 46vw;
-  min-width: 700px;
-  max-width: 900px;
-  height: 100vh;
+  flex: 1;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
   padding: 14px;
   display: grid;
   grid-template-rows: auto 1fr auto;
@@ -276,6 +277,7 @@ onBeforeUnmount(() => {
   justify-content: space-between;
   align-items: center;
   gap: 16px;
+  flex-wrap: wrap;
 }
 .topbar h1 {
   margin: 0;
@@ -289,7 +291,7 @@ onBeforeUnmount(() => {
   gap: 12px;
 }
 .search input {
-  width: 220px;
+  width: clamp(180px, 22vw, 320px);
   border: 1px solid #cbd5e1;
   border-radius: 8px;
   padding: 8px 10px;
@@ -310,6 +312,24 @@ onBeforeUnmount(() => {
   display: grid;
   grid-template-columns: 84px minmax(220px, 1fr) minmax(280px, 1.15fr);
   gap: 14px;
+}
+
+@media (max-width: 1180px) {
+  .layout {
+    grid-template-columns: 72px minmax(220px, 1fr) minmax(240px, 1fr);
+  }
+}
+
+@media (max-width: 980px) {
+  .shell {
+    padding: 10px;
+    gap: 10px;
+  }
+  .layout {
+    gap: 10px;
+    grid-template-columns: 1fr;
+    grid-template-rows: auto minmax(220px, 38vh) 1fr;
+  }
 }
 .footer {
   padding: 10px 14px;
