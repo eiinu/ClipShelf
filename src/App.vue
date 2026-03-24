@@ -310,13 +310,13 @@ onBeforeUnmount(() => {
 .layout {
   min-height: 0;
   display: grid;
-  grid-template-columns: 84px minmax(220px, 1fr) minmax(280px, 1.15fr);
+  grid-template-columns: 76px minmax(240px, 320px) minmax(0, 1fr);
   gap: 14px;
 }
 
 @media (max-width: 1180px) {
   .layout {
-    grid-template-columns: 72px minmax(220px, 1fr) minmax(240px, 1fr);
+    grid-template-columns: 70px minmax(220px, 280px) minmax(0, 1fr);
   }
 }
 

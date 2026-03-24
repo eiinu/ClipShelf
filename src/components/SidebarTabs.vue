@@ -26,7 +26,7 @@ const emit = defineEmits<{
 
 <style scoped>
 .sidebar {
-  padding: 16px;
+  padding: 12px 8px;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -34,9 +34,13 @@ const emit = defineEmits<{
 }
 .tab {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 66px;
+  padding: 10px 6px;
   border-radius: 8px;
   border: 1px solid transparent;
   background: #ffffff;
@@ -53,11 +57,16 @@ const emit = defineEmits<{
   color: #1e293b;
 }
 .emoji {
-  width: 24px;
+  width: 100%;
   text-align: center;
   font-weight: 600;
 }
-.label { font-size: 14px; }
+.label {
+  font-size: 12px;
+  line-height: 1.2;
+  text-align: center;
+  white-space: nowrap;
+}
 
 @media (max-width: 980px) {
   .sidebar {
