@@ -1,10 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import CodeEditor from './CodeEditor.vue';
-import prettier from 'prettier';
-import parserBabel from 'prettier/parser-babel';
-import parserHtml from 'prettier/parser-html';
-import parserMarkdown from 'prettier/parser-markdown';
 import { NSelect } from 'naive-ui';
 
 type PreviewLanguage = 'plain' | 'html' | 'md' | 'json' | 'js' | 'ts' | 'xml';
@@ -84,71 +80,80 @@ const formatCode = async () => {
   try {
     let result: string;
     
-    switch (selectedLanguage.value) {
-      case 'plain':
-        result = code;
-        break;
-      case 'md':
-        result = await prettier.format(code, {
-          parser: 'markdown',
-          plugins: [parserMarkdown],
-          semi: true,
-          singleQuote: true,
-          tabWidth: 2,
-          printWidth: 80
-        });
-        break;
-      case 'json':
-        result = await prettier.format(code, {
-          parser: 'json',
-          plugins: [parserBabel],
-          semi: false,
-          tabWidth: 2,
-          printWidth: 80
-        });
-        break;
-      case 'html':
-        result = await prettier.format(code, {
-          parser: 'html',
-          plugins: [parserHtml],
-          semi: true,
-          singleQuote: true,
-          tabWidth: 2,
-          printWidth: 80
-        });
-        break;
-      case 'xml':
-        result = await prettier.format(code, {
-          parser: 'html',
-          plugins: [parserHtml],
-          semi: true,
-          singleQuote: true,
-          tabWidth: 2,
-          printWidth: 80
-        });
-        break;
-      case 'js':
-        result = await prettier.format(code, {
-          parser: 'babel',
-          plugins: [parserBabel],
-          semi: true,
-          singleQuote: true,
-          tabWidth: 2,
-          printWidth: 80
-        });
-        break;
-      case 'ts':
-        result = await prettier.format(code, {
-          parser: 'typescript',
-          plugins: [parserBabel],
-          semi: true,
-          singleQuote: true,
-          tabWidth: 2,
-          printWidth: 80
-        });
-        break;
-      default:
-        result = code;
+    if (selectedLanguage.value === 'plain') {
+      result = code;
+    } else {
+      // 动态导入 Prettier 及其解析器
+      const [prettier, parserBabel, parserHtml, parserMarkdown] = await Promise.all([
+        import('prettier'),
+        import('prettier/parser-babel'),
+        import('prettier/parser-html'),
+        import('prettier/parser-markdown')
+      ]);
+      
+      switch (selectedLanguage.value) {
+        case 'md':
+          result = await prettier.default.format(code, {
+            parser: 'markdown',
+            plugins: [parserMarkdown.default],
+            semi: true,
+            singleQuote: true,
+            tabWidth: 2,
+            printWidth: 80
+          });
+          break;
+        case 'json':
+          result = await prettier.default.format(code, {
+            parser: 'json',
+            plugins: [parserBabel.default],
+            semi: false,
+            tabWidth: 2,
+            printWidth: 80
+          });
+          break;
+        case 'html':
+          result = await prettier.default.format(code, {
+            parser: 'html',
+            plugins: [parserHtml.default],
+            semi: true,
+            singleQuote: true,
+            tabWidth: 2,
+            printWidth: 80
+          });
+          break;
+        case 'xml':
+          result = await prettier.default.format(code, {
+            parser: 'html',
+            plugins: [parserHtml.default],
+            semi: true,
+            singleQuote: true,
+            tabWidth: 2,
+            printWidth: 80
+          });
+          break;
+        case 'js':
+          result = await prettier.default.format(code, {
+            parser: 'babel',
+            plugins: [parserBabel.default],
+            semi: true,
+            singleQuote: true,
+            tabWidth: 2,
+            printWidth: 80
+          });
+          break;
+        case 'ts':
+          result = await prettier.default.format(code, {
+            parser: 'typescript',
+            plugins: [parserBabel.default],
+            semi: true,
+            singleQuote: true,
+            tabWidth: 2,
+            printWidth: 80
+          });
+          break;
+        default:
+          result = code;
+      }
     }
 
     formattedCode.value = result;

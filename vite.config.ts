@@ -8,4 +8,19 @@ export default defineConfig({
     strictPort: true,
   },
   clearScreen: false,
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor': ['vue'],
+          'naive-ui': ['naive-ui'],
+          'prettier': ['prettier', 'prettier/parser-babel', 'prettier/parser-html', 'prettier/parser-markdown'],
+          'codemirror-core': ['codemirror', '@codemirror/state', '@codemirror/view'],
+          'codemirror-lang': ['@codemirror/lang-html'],
+          'code-editor': ['./src/components/CodeEditor.vue'],
+          'preview-pane': ['./src/components/PreviewPane.vue']
+        }
+      }
+    }
+  }
 });
