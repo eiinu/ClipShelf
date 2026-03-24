@@ -33,6 +33,7 @@ const selectedLanguage = ref<PreviewLanguage>('plain');
 const formattedCode = ref('');
 const toastMessage = ref('');
 const showToast = ref(false);
+const contentType = ref<'text' | 'html'>('text');
 
 const showToastMessage = (message: string) => {
   toastMessage.value = message;
@@ -47,7 +48,8 @@ const showToastMessage = (message: string) => {
 
 const sourceCode = computed(() => {
   if (!props.clip) return '';
-  if (props.clip.kind === 'html') return props.clip.html ?? '';
+  if (props.clip.kind === 'html' && contentType.value === 'html') return props.clip.html ?? '';
+  if (props.clip.kind === 'html' && contentType.value === 'text' && props.clip.text) return props.clip.text;
   if (props.clip.kind === 'text') return props.clip.text ?? '';
   return '';
 });
@@ -62,6 +64,7 @@ watch(
     toastMessage.value = '';
     showToast.value = false;
     formattedCode.value = '';
+    contentType.value = 'text';
     selectedLanguage.value = props.clip?.kind === 'html' ? 'html' : 'plain';
   },
   { immediate: true },
@@ -180,10 +183,19 @@ const copyContent = async () => {
     <template v-if="clip">
       <div v-if="clip.kind !== 'image'" class="code-container">
         <div class="code-controls">
-          <label>
-            <span>语言</span>
-            <NSelect v-model:value="selectedLanguage" :options="languageOptions" />
-          </label>
+          <div class="language-controls">
+            <label>
+              <span>语言</span>
+              <NSelect v-model:value="selectedLanguage" :options="languageOptions" />
+            </label>
+            <label v-if="clip && clip.kind === 'html' && clip.text">
+              <span>内容</span>
+              <select v-model="contentType">
+                <option value="text">文本</option>
+                <option value="html">HTML</option>
+              </select>
+            </label>
+          </div>
           <div class="action-buttons">
             <button type="button" @click="formatCode">格式化</button>
             <button type="button" @click="copyContent">复制</button>
@@ -234,6 +246,13 @@ const copyContent = async () => {
   gap: 12px;
   flex-wrap: wrap;
   padding: 8px 0;
+}
+
+.language-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 .code-controls label {

@@ -167,6 +167,7 @@ mod macos {
         }
 
         if let Some(html) = pasteboard_string(pasteboard, unsafe { &NSPasteboardTypeHTML }) {
+            let text = pasteboard_string(pasteboard, unsafe { &NSPasteboardTypeString });
             let preview = html
                 .replace('\n', " ")
                 .chars()
@@ -176,7 +177,7 @@ mod macos {
                 kind: ClipKind::Html,
                 title: first_line(&html, "HTML snippet"),
                 preview,
-                text: None,
+                text,
                 html: Some(html),
                 image_data_url: None,
                 source: "NSPasteboardTypeHTML".into(),
