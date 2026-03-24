@@ -30,7 +30,19 @@ const props = defineProps<{
 
 const selectedLanguage = ref<PreviewLanguage>('plain');
 const formattedCode = ref('');
-const formatStatus = ref('');
+const toastMessage = ref('');
+const showToast = ref(false);
+
+const showToastMessage = (message: string) => {
+  toastMessage.value = message;
+  showToast.value = true;
+  setTimeout(() => {
+    showToast.value = false;
+    setTimeout(() => {
+      toastMessage.value = '';
+    }, 300);
+  }, 2000);
+};
 
 const sourceCode = computed(() => {
   if (!props.clip) return '';
@@ -46,7 +58,8 @@ const canOperateCode = computed(() => !!props.clip && props.clip.kind !== 'image
 watch(
   () => props.clip?.id,
   () => {
-    formatStatus.value = '';
+    toastMessage.value = '';
+    showToast.value = false;
     formattedCode.value = '';
     selectedLanguage.value = props.clip?.kind === 'html' ? 'html' : 'plain';
   },
@@ -115,7 +128,7 @@ const formatCode = async () => {
   const code = sourceCode.value;
   if (!code.trim()) {
     formattedCode.value = '';
-    formatStatus.value = '当前内容为空';
+    showToastMessage('当前内容为空');
     return;
   }
 
@@ -138,9 +151,9 @@ const formatCode = async () => {
         break;
     }
 
-    formatStatus.value = '格式化完成';
+    showToastMessage('格式化完成');
   } catch (error) {
-    formatStatus.value = error instanceof Error ? `格式化失败：${error.message}` : '格式化失败';
+    showToastMessage(error instanceof Error ? `格式化失败：${error.message}` : '格式化失败');
   }
 };
 
@@ -149,9 +162,9 @@ const copyContent = async () => {
 
   try {
     await navigator.clipboard.writeText(displayCode.value);
-    formatStatus.value = '已复制到剪贴板';
+    showToastMessage('已复制到剪贴板');
   } catch (error) {
-    formatStatus.value = error instanceof Error ? `复制失败：${error.message}` : '复制失败';
+    showToastMessage(error instanceof Error ? `复制失败：${error.message}` : '复制失败');
   }
 };
 </script>
@@ -159,20 +172,6 @@ const copyContent = async () => {
 <template>
   <section class="preview-panel">
     <template v-if="clip">
-      <header class="header">
-        <h2>{{ clip.title }}</h2>
-        <div v-if="canOperateCode" class="controls">
-          <label>
-            <span>语言</span>
-            <select v-model="selectedLanguage">
-              <option v-for="option in languageOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
-            </select>
-          </label>
-          <button type="button" @click="formatCode">格式化</button>
-          <button type="button" @click="copyContent">复制</button>
-        </div>
-      </header>
-
       <CodeEditor
         v-if="clip.kind !== 'image'"
         :model-value="displayCode"
@@ -182,12 +181,15 @@ const copyContent = async () => {
       <div v-else class="image-viewer">
         <img :src="clip.image_data_url ?? ''" alt="clipboard image" />
       </div>
-
-      <p v-if="formatStatus" class="status">{{ formatStatus }}</p>
     </template>
 
     <div v-else class="empty-state">
       未选中内容
+    </div>
+
+    <!-- 简单提示 -->
+    <div v-if="toastMessage" class="toast" :class="{ 'show': showToast }">
+      {{ toastMessage }}
     </div>
   </section>
 </template>
@@ -196,43 +198,9 @@ const copyContent = async () => {
 .preview-panel {
   padding: 14px;
   display: grid;
-  grid-template-rows: auto 1fr auto;
-  gap: 12px;
+  grid-template-rows: 1fr;
   min-height: 0;
-}
-.header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-.header h2 { margin: 0; font-size: 18px; font-weight: 600; color: #1e293b; }
-.controls {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.controls label {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  color: #64748b;
-  font-size: 13px;
-}
-.controls select,
-.controls button {
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
-  background: #fff;
-  color: #334155;
-  padding: 6px 10px;
-}
-.controls button {
-  cursor: pointer;
-}
-.controls button:hover {
-  background: #f8fafc;
+  position: relative;
 }
 .image-viewer,
 .empty-state {
@@ -261,9 +229,25 @@ const copyContent = async () => {
   font-size: 14px;
   padding: 16px;
 }
-.status {
-  margin: 0;
-  color: #64748b;
+
+/* Toast提示样式 */
+.toast {
+  position: absolute;
+  bottom: 14px;
+  right: 14px;
+  background: rgba(15, 23, 42, 0.8);
+  color: white;
+  padding: 8px 16px;
+  border-radius: 8px;
   font-size: 13px;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: all 0.3s ease;
+  z-index: 1000;
+}
+
+.toast.show {
+  opacity: 1;
+  transform: translateY(0);
 }
 </style>
