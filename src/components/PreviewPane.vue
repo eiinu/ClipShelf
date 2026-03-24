@@ -5,6 +5,7 @@ import prettier from 'prettier';
 import parserBabel from 'prettier/parser-babel';
 import parserHtml from 'prettier/parser-html';
 import parserMarkdown from 'prettier/parser-markdown';
+import { NSelect } from 'naive-ui';
 
 type PreviewLanguage = 'plain' | 'html' | 'md' | 'json' | 'js' | 'ts' | 'xml';
 
@@ -176,9 +177,7 @@ const copyContent = async () => {
         <div class="code-controls">
           <label>
             <span>语言</span>
-            <select v-model="selectedLanguage">
-              <option v-for="option in languageOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
-            </select>
+            <NSelect v-model:value="selectedLanguage" :options="languageOptions" />
           </label>
           <div class="action-buttons">
             <button type="button" @click="formatCode">格式化</button>
