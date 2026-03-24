@@ -232,8 +232,9 @@ fn build_tray(app: &AppHandle) -> Result<(), tauri::Error> {
     let quit = MenuItemBuilder::with_id("quit", "退出 ClipShelf").build(app)?;
     let menu = MenuBuilder::new(app).items(&[&show, &quit]).build()?;
 
-    TrayIconBuilder::with_id("clipshelf-tray")
+    let mut tray_builder = TrayIconBuilder::with_id("clipshelf-tray")
         .menu(&menu)
+        .tooltip("ClipShelf 正在后台运行，右键可退出")
         .show_menu_on_left_click(false)
         .on_menu_event(|app, event| match event.id().as_ref() {
             "show" => {
@@ -261,8 +262,13 @@ fn build_tray(app: &AppHandle) -> Result<(), tauri::Error> {
                     let _ = window.set_focus();
                 }
             }
-        })
-        .build(app)?;
+        });
+
+    if let Some(icon) = app.default_window_icon().cloned() {
+        tray_builder = tray_builder.icon(icon);
+    }
+
+    tray_builder.build(app)?;
 
     Ok(())
 }
@@ -285,7 +291,11 @@ fn main() {
 
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![start_clipboard_listener, load_saved_clips, save_clips])
+        .invoke_handler(tauri::generate_handler![
+            start_clipboard_listener,
+            load_saved_clips,
+            save_clips
+        ])
         .run(tauri::generate_context!())
         .expect("error while running ClipShelf");
 }
