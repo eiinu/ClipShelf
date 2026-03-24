@@ -5,7 +5,7 @@ import { EditorView } from '@codemirror/view';
 import { basicSetup } from 'codemirror';
 import { html } from '@codemirror/lang-html';
 
-type EditorLanguage = 'text' | 'html';
+type EditorLanguage = 'plain' | 'html' | 'md' | 'json' | 'js' | 'ts' | 'xml';
 
 const props = defineProps<{
   modelValue: string;
@@ -35,33 +35,17 @@ const extensions = computed(() => {
         lineHeight: '1.6',
       },
       '.cm-content': {
-        padding: '16px',
+        padding: '14px',
       },
       '.cm-gutters': {
         backgroundColor: '#f1f5f9',
         color: '#94a3b8',
         border: 'none',
       },
-      '.cm-activeLine': {
-        backgroundColor: 'rgba(148, 163, 184, 0.1)',
-      },
-      '.cm-activeLineGutter': {
-        backgroundColor: '#f1f5f9',
-      },
-      '.cm-selectionBackground, &.cm-focused .cm-selectionBackground': {
-        backgroundColor: 'rgba(148, 163, 184, 0.2)',
-      },
-      '.cm-cursor, .cm-dropCursor': {
-        borderLeftColor: '#64748b',
-      },
-      '.cm-panels': {
-        backgroundColor: '#f8fafc',
-        color: '#475569',
-      },
     }),
   ];
 
-  return props.language === 'html' ? [...base, html()] : base;
+  return props.language === 'html' || props.language === 'xml' ? [...base, html()] : base;
 });
 
 const mountEditor = () => {
