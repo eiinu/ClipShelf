@@ -21,7 +21,6 @@ defineProps<{
     <template v-if="clip">
       <header class="header">
         <div>
-          <p>详情预览</p>
           <h2>{{ clip.title }}</h2>
         </div>
       </header>
@@ -44,7 +43,7 @@ defineProps<{
     </template>
 
     <div v-else class="empty-state">
-      还没有选中的条目。先在系统中复制一点内容试试。
+未选中内容
     </div>
   </section>
 </template>
@@ -57,10 +56,7 @@ defineProps<{
   gap: 16px;
   min-height: 0;
 }
-.header p,
-.header h2 { margin: 0; }
-.header p { color: #64748b; margin-bottom: 6px; font-size: 14px; }
-.header h2 { font-size: 20px; font-weight: 600; color: #1e293b; }
+.header h2 { margin: 0; font-size: 18px; font-weight: 600; color: #1e293b; }
 .image-viewer,
 .empty-state {
   min-height: 0;
@@ -72,7 +68,7 @@ defineProps<{
   display: grid;
   place-items: center;
   overflow: hidden;
-  padding: 24px;
+  padding: 16px;
 }
 .image-viewer img {
   max-width: 100%;
@@ -86,6 +82,6 @@ defineProps<{
   place-items: center;
   color: #64748b;
   font-size: 14px;
-  padding: 24px;
+  padding: 16px;
 }
 </style>

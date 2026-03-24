@@ -32,8 +32,7 @@ const kindLabel: Record<ClipItem['kind'], string> = {
   <section class="panel">
     <div class="panel-header">
       <div>
-        <p>剪贴板历史</p>
-        <h2>{{ items.length }} 个条目</h2>
+        <h2>{{ items.length }} 项</h2>
       </div>
     </div>
 
@@ -73,31 +72,28 @@ const kindLabel: Record<ClipItem['kind'], string> = {
     </div>
 
     <div v-else class="empty">
-      当前筛选条件下没有结果。你可以复制任意文本、HTML 或图片，或者调整搜索词试试。
+无结果
     </div>
   </section>
 </template>
 
 <style scoped>
 .panel {
-  padding: 16px;
+  padding: 12px;
   display: grid;
   grid-template-rows: auto 1fr;
-  gap: 16px;
+  gap: 12px;
   min-height: 0;
 }
-.panel-header p,
-.panel-header h2 { margin: 0; }
-.panel-header p { color: #64748b; font-size: 14px; margin-bottom: 6px; }
-.panel-header h2 { font-size: 20px; font-weight: 600; color: #1e293b; }
+.panel-header h2 { margin: 0; font-size: 18px; font-weight: 600; color: #1e293b; }
 .list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
   overflow: auto;
 }
 .card {
-  padding: 16px;
+  padding: 12px;
   border-radius: 12px;
   background: #ffffff;
   border: 1px solid #e2e8f0;
@@ -151,9 +147,9 @@ const kindLabel: Record<ClipItem['kind'], string> = {
   color: #1e293b;
 }
 .preview-box {
-  margin: 12px 0;
-  min-height: 100px;
-  max-height: 140px;
+  margin: 10px 0;
+  min-height: 84px;
+  max-height: 120px;
   overflow: hidden;
   border-radius: 8px;
   background: #f8fafc;
@@ -161,7 +157,7 @@ const kindLabel: Record<ClipItem['kind'], string> = {
 }
 .preview-box img {
   width: 100%;
-  height: 140px;
+  height: 120px;
   object-fit: cover;
   display: block;
 }
