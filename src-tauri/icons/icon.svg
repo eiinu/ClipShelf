@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <!-- 背景 -->
+  <rect width="512" height="512" rx="100" fill="#f0f8ff"/>
+  <!-- 剪贴板主体 -->
+  <rect x="100" y="120" width="312" height="320" rx="12" fill="#ffffff" stroke="#1e90ff" stroke-width="16"/>
+  <!-- 剪贴板顶部 -->
+  <rect x="120" y="80" width="272" height="40" rx="8" fill="#1e90ff"/>
+  <!-- 剪贴板线条 -->
+  <rect x="140" y="180" width="232" height="4" rx="2" fill="#1e90ff"/>
+  <rect x="140" y="240" width="232" height="4" rx="2" fill="#1e90ff"/>
+  <rect x="140" y="300" width="180" height="4" rx="2" fill="#1e90ff"/>
+</svg>
