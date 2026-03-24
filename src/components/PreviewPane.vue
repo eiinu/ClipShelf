@@ -60,20 +60,36 @@ const formatMarkup = (code: string) => {
     .trim();
 
   let indent = 0;
-  return normalized
-    .split(/(?=<)|(?<=>)/g)
-    .filter(Boolean)
-    .map((part) => {
-      const token = part.trim();
-      if (!token) return '';
-
-      if (token.startsWith('</')) indent = Math.max(indent - 1, 0);
-      const line = `${'  '.repeat(indent)}${token}`;
-      if (token.startsWith('<') && !token.startsWith('</') && !token.endsWith('/>') && !token.includes('</')) indent += 1;
-      return line;
-    })
-    .filter(Boolean)
-    .join('\n');
+  const lines: string[] = [];
+  
+  // 按标签分割，保留标签和内容
+  const parts = normalized.split(/(<[^>]+>)/g).filter(Boolean);
+  
+  for (const part of parts) {
+    if (part.startsWith('<')) {
+      // 处理标签
+      if (part.startsWith('</')) {
+        // 结束标签，先减少缩进
+        indent = Math.max(indent - 1, 0);
+        lines.push(`${'  '.repeat(indent)}${part}`);
+      } else if (part.endsWith('/>')) {
+        // 自闭合标签，保持缩进
+        lines.push(`${'  '.repeat(indent)}${part}`);
+      } else {
+        // 开始标签，先添加，再增加缩进
+        lines.push(`${'  '.repeat(indent)}${part}`);
+        indent += 1;
+      }
+    } else {
+      // 处理内容，保持当前缩进
+      const content = part.trim();
+      if (content) {
+        lines.push(`${'  '.repeat(indent)}${content}`);
+      }
+    }
+  }
+  
+  return lines.join('\n');
 };
 
 const formatJsLike = (code: string) => {
