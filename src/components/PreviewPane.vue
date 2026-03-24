@@ -172,12 +172,25 @@ const copyContent = async () => {
 <template>
   <section class="preview-panel">
     <template v-if="clip">
-      <CodeEditor
-        v-if="clip.kind !== 'image'"
-        :model-value="displayCode"
-        :language="selectedLanguage"
-        :language-label="languageLabel"
-      />
+      <div v-if="clip.kind !== 'image'" class="code-container">
+        <div class="code-controls">
+          <label>
+            <span>语言</span>
+            <select v-model="selectedLanguage">
+              <option v-for="option in languageOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
+            </select>
+          </label>
+          <div class="action-buttons">
+            <button type="button" @click="formatCode">格式化</button>
+            <button type="button" @click="copyContent">复制</button>
+          </div>
+        </div>
+        <CodeEditor
+          :model-value="displayCode"
+          :language="selectedLanguage"
+          :language-label="languageLabel"
+        />
+      </div>
       <div v-else class="image-viewer">
         <img :src="clip.image_data_url ?? ''" alt="clipboard image" />
       </div>
@@ -201,6 +214,53 @@ const copyContent = async () => {
   grid-template-rows: 1fr;
   min-height: 0;
   position: relative;
+}
+
+.code-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+}
+
+.code-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 8px 0;
+}
+
+.code-controls label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.code-controls select,
+.code-controls button {
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #fff;
+  color: #334155;
+  padding: 6px 10px;
+}
+
+.code-controls button {
+  cursor: pointer;
+}
+
+.code-controls button:hover {
+  background: #f8fafc;
+}
+
+.action-buttons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 .image-viewer,
 .empty-state {
