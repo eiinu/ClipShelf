@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import CodeEditor from './CodeEditor.vue';
+import prettier from 'prettier';
+import parserBabel from 'prettier/parser-babel';
+import parserHtml from 'prettier/parser-html';
+import parserMarkdown from 'prettier/parser-markdown';
 
 type PreviewLanguage = 'plain' | 'html' | 'md' | 'json' | 'js' | 'ts' | 'xml';
 
@@ -66,62 +70,6 @@ watch(
   { immediate: true },
 );
 
-const formatMarkup = (code: string) => {
-  const normalized = code
-    .replace(/>\s+</g, '><')
-    .replace(/\n+/g, '')
-    .trim();
-
-  let indent = 0;
-  const lines: string[] = [];
-  
-  // 按标签分割，保留标签和内容
-  const parts = normalized.split(/(<[^>]+>)/g).filter(Boolean);
-  
-  for (const part of parts) {
-    if (part.startsWith('<')) {
-      // 处理标签
-      if (part.startsWith('</')) {
-        // 结束标签，先减少缩进
-        indent = Math.max(indent - 1, 0);
-        lines.push(`${'  '.repeat(indent)}${part}`);
-      } else if (part.endsWith('/>')) {
-        // 自闭合标签，保持缩进
-        lines.push(`${'  '.repeat(indent)}${part}`);
-      } else {
-        // 开始标签，先添加，再增加缩进
-        lines.push(`${'  '.repeat(indent)}${part}`);
-        indent += 1;
-      }
-    } else {
-      // 处理内容，保持当前缩进
-      const content = part.trim();
-      if (content) {
-        lines.push(`${'  '.repeat(indent)}${content}`);
-      }
-    }
-  }
-  
-  return lines.join('\n');
-};
-
-const formatJsLike = (code: string) => {
-  let indent = 0;
-  return code
-    .split('\n')
-    .map((rawLine) => rawLine.trim())
-    .filter((line) => line.length > 0)
-    .map((line) => {
-      if (/^[}\])]/.test(line)) indent = Math.max(indent - 1, 0);
-      const formatted = `${'  '.repeat(indent)}${line}`;
-      const opens = (line.match(/[\[{(]/g) ?? []).length;
-      const closes = (line.match(/[\]})]/g) ?? []).length;
-      indent = Math.max(indent + opens - closes, 0);
-      return formatted;
-    })
-    .join('\n');
-};
-
 const formatCode = async () => {
   if (!canOperateCode.value) return;
 
@@ -133,24 +81,76 @@ const formatCode = async () => {
   }
 
   try {
+    let result: string;
+    
     switch (selectedLanguage.value) {
       case 'plain':
+        result = code;
+        break;
       case 'md':
-        formattedCode.value = code;
+        result = await prettier.format(code, {
+          parser: 'markdown',
+          plugins: [parserMarkdown],
+          semi: true,
+          singleQuote: true,
+          tabWidth: 2,
+          printWidth: 80
+        });
         break;
       case 'json':
-        formattedCode.value = JSON.stringify(JSON.parse(code), null, 2);
+        result = await prettier.format(code, {
+          parser: 'json',
+          plugins: [parserBabel],
+          semi: false,
+          tabWidth: 2,
+          printWidth: 80
+        });
         break;
       case 'html':
+        result = await prettier.format(code, {
+          parser: 'html',
+          plugins: [parserHtml],
+          semi: true,
+          singleQuote: true,
+          tabWidth: 2,
+          printWidth: 80
+        });
+        break;
       case 'xml':
-        formattedCode.value = formatMarkup(code);
+        result = await prettier.format(code, {
+          parser: 'html',
+          plugins: [parserHtml],
+          semi: true,
+          singleQuote: true,
+          tabWidth: 2,
+          printWidth: 80
+        });
         break;
       case 'js':
-      case 'ts':
-        formattedCode.value = formatJsLike(code);
+        result = await prettier.format(code, {
+          parser: 'babel',
+          plugins: [parserBabel],
+          semi: true,
+          singleQuote: true,
+          tabWidth: 2,
+          printWidth: 80
+        });
         break;
+      case 'ts':
+        result = await prettier.format(code, {
+          parser: 'typescript',
+          plugins: [parserBabel],
+          semi: true,
+          singleQuote: true,
+          tabWidth: 2,
+          printWidth: 80
+        });
+        break;
+      default:
+        result = code;
     }
 
+    formattedCode.value = result;
     showToastMessage('格式化完成');
   } catch (error) {
     showToastMessage(error instanceof Error ? `格式化失败：${error.message}` : '格式化失败');
