@@ -30,6 +30,7 @@ const emit = defineEmits<{
   display: flex;
   flex-direction: column;
   gap: 8px;
+  min-height: 0;
 }
 .tab {
   display: flex;
@@ -57,4 +58,20 @@ const emit = defineEmits<{
   font-weight: 600;
 }
 .label { font-size: 14px; }
+
+@media (max-width: 980px) {
+  .sidebar {
+    flex-direction: row;
+    flex-wrap: wrap;
+    padding: 12px;
+    gap: 6px;
+  }
+  .tab {
+    padding: 8px 10px;
+    gap: 8px;
+  }
+  .emoji {
+    width: auto;
+  }
+}
 </style>
