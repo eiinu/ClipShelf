@@ -26,7 +26,7 @@ interface ClipItem extends ClipboardPayload {
 }
 
 const tabs: Array<{ key: ClipTab; label: string; emoji: string }> = [
-  { key: 'default', label: '默认', emoji: '⌘' },
+  { key: 'default', label: '全部', emoji: '⌘' },
   { key: 'favorites', label: '收藏', emoji: '★' },
   { key: 'text', label: '文本', emoji: 'T' },
   { key: 'html', label: 'HTML', emoji: '</>' },
@@ -181,59 +181,69 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <main class="shell">
-    <header class="topbar">
-      <div>
-        <p class="eyebrow">macOS clipboard desk</p>
+  <div class="app-frame">
+    <main class="shell">
+      <header class="topbar">
         <h1>ClipShelf</h1>
-      </div>
-      <div class="toolbar-group">
-        <label class="search">
-          <span>搜索</span>
-          <input v-model="searchQuery" type="search" placeholder="标题、内容、来源…" />
-        </label>
-        <div class="status">
-          <span class="dot" />
-          监听中 · {{ clips.length }} 条记录 · {{ pinnedCount }} 条置顶
+        <div class="toolbar-group">
+          <label class="search">
+            <input v-model="searchQuery" type="search" placeholder="搜索…" />
+          </label>
+          <div class="status">{{ clips.length }} / {{ pinnedCount }}</div>
         </div>
-      </div>
-    </header>
+      </header>
 
-    <section class="layout">
-      <SidebarTabs v-model="activeTab" :tabs="tabs" />
-      <ClipList
-        :items="filteredClips"
-        :selected-id="selectedClip?.id ?? null"
-        @select="selectedId = $event"
-        @toggle-favorite="toggleFavorite"
-        @toggle-pinned="togglePinned"
-      />
-      <PreviewPane :clip="selectedClip" />
-    </section>
+      <section class="layout">
+        <SidebarTabs v-model="activeTab" :tabs="tabs" />
+        <ClipList
+          :items="filteredClips"
+          :selected-id="selectedClip?.id ?? null"
+          @select="selectedId = $event"
+          @toggle-favorite="toggleFavorite"
+          @toggle-pinned="togglePinned"
+        />
+        <PreviewPane :clip="selectedClip" />
+      </section>
 
-    <footer class="footer">
-      <span>文本 / HTML 详情现已基于 CodeMirror 预览，并自动持久化到本地存储。</span>
-      <span v-if="storageError || pollingError" class="error">{{ storageError || pollingError }}</span>
-    </footer>
-  </main>
+      <footer v-if="storageError || pollingError" class="footer error">{{ storageError || pollingError }}</footer>
+    </main>
+  </div>
 </template>
 
 <style scoped>
 :global(*) { box-sizing: border-box; }
-:global(body) {
+:global(html),
+:global(body),
+:global(#app) {
   margin: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+:global(body) {
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   background: #f8fafc;
   color: #1e293b;
 }
 :global(button), :global(input), :global(textarea) { font: inherit; }
 
+.app-frame {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+}
 .shell {
-  min-height: 100vh;
-  padding: 24px;
+  width: 50vw;
+  min-width: 760px;
+  max-width: 980px;
+  height: 100vh;
+  padding: 24px 16px;
   display: grid;
   grid-template-rows: auto 1fr auto;
-  gap: 20px;
+  gap: 16px;
+  overflow: hidden;
 }
 .topbar,
 .footer,
@@ -241,89 +251,65 @@ onBeforeUnmount(() => {
   background: #ffffff;
   border: 1px solid #e2e8f0;
   border-radius: 12px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 .topbar {
-  padding: 20px 24px;
+  padding: 14px 16px;
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 16px;
 }
-.eyebrow {
-  margin: 0 0 8px;
-  text-transform: uppercase;
-  letter-spacing: 0.16em;
-  color: #64748b;
-  font-size: 12px;
-}
-h1 { margin: 0; font-size: 24px; font-weight: 600; color: #1e293b; }
+h1 { margin: 0; font-size: 20px; font-weight: 600; color: #1e293b; }
 .toolbar-group {
   display: flex;
   align-items: center;
-  gap: 14px;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-}
-.search {
-  display: grid;
-  gap: 6px;
-  color: #64748b;
-  font-size: 12px;
+  gap: 10px;
 }
 .search input {
-  width: min(320px, 48vw);
-  padding: 12px 14px;
+  width: min(260px, 40vw);
+  padding: 8px 10px;
   border-radius: 8px;
   border: 1px solid #e2e8f0;
   background: #ffffff;
   color: #1e293b;
   outline: none;
-  transition: border-color 0.2s ease;
 }
 .search input:focus {
   border-color: #94a3b8;
-  box-shadow: 0 0 0 3px rgba(148, 163, 184, 0.1);
 }
 .search input::placeholder { color: #94a3b8; }
 .status {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
-  padding: 12px 16px;
+  padding: 8px 12px;
   border-radius: 999px;
   background: #f1f5f9;
   color: #64748b;
-  font-size: 14px;
-}
-.dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #10b981;
+  font-size: 12px;
 }
 .layout {
   display: grid;
-  grid-template-columns: 200px minmax(280px, 360px) 1fr;
-  gap: 16px;
+  grid-template-columns: 132px minmax(220px, 280px) 1fr;
+  gap: 12px;
   min-height: 0;
+  overflow: hidden;
 }
 .layout > * {
-  min-height: 68vh;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
 }
 .footer {
-  padding: 14px 18px;
-  display: flex;
-  justify-content: space-between;
-  gap: 16px;
+  padding: 8px 12px;
   color: #64748b;
-  font-size: 14px;
+  font-size: 12px;
 }
 .error { color: #ef4444; }
 
-@media (max-width: 1180px) {
-  .layout {
-    grid-template-columns: 88px minmax(260px, 320px) 1fr;
+@media (max-width: 1500px) {
+  .shell {
+    width: min(980px, 100vw);
+    min-width: 0;
   }
 }
 

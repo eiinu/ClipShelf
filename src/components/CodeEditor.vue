@@ -89,14 +89,7 @@ onBeforeUnmount(() => {
 
 <template>
   <section class="editor-shell">
-    <div class="toolbar">
-      <span class="traffic">
-        <i />
-        <i />
-        <i />
-      </span>
-      <span>{{ languageLabel }}</span>
-    </div>
+    <div class="toolbar">{{ languageLabel }}</div>
     <div ref="host" class="editor-host" />
   </section>
 </template>
@@ -112,25 +105,12 @@ onBeforeUnmount(() => {
   background: #f8fafc;
 }
 .toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 16px;
+  padding: 8px 12px;
   background: #f1f5f9;
   color: #64748b;
   font-size: 13px;
   border-bottom: 1px solid #e2e8f0;
 }
-.traffic { display: inline-flex; gap: 6px; }
-.traffic i {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  display: block;
-}
-.traffic i:nth-child(1) { background: #ef4444; }
-.traffic i:nth-child(2) { background: #f59e0b; }
-.traffic i:nth-child(3) { background: #10b981; }
 .editor-host {
   min-height: 0;
   height: 100%;
