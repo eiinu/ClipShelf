@@ -59,14 +59,12 @@ const filteredClips = computed(() => {
         ? clips.value.filter((clip) => clip.favorite)
         : clips.value.filter((clip) => clip.kind === activeTab.value);
 
-  const byQuery = !normalizedQuery.value
+  return !normalizedQuery.value
     ? byTab
     : byTab.filter((clip) => {
         const haystacks = [clip.title, clip.preview, clip.text ?? '', clip.html ?? '', clip.source];
         return haystacks.some((value) => value.toLowerCase().includes(normalizedQuery.value));
       });
-
-  return [...byQuery].sort(compareClips);
 });
 
 const selectedClip = computed(
@@ -190,13 +188,12 @@ const removeClip = (id: string) => {
 };
 
 watch(
-  filteredClips,
+  () => filteredClips.value.map((clip) => clip.id),
   (next) => {
-    if (!next.some((clip) => clip.id === selectedId.value)) {
-      selectedId.value = next[0]?.id ?? null;
+    if (!next.includes(selectedId.value ?? '')) {
+      selectedId.value = next[0] ?? null;
     }
   },
-  { deep: true },
 );
 
 watch(
