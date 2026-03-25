@@ -24,6 +24,7 @@ interface ClipItem extends ClipboardPayload {
   createdAt: string;
   favorite: boolean;
   pinned: boolean;
+  groupId?: string | null;
 }
 
 const tabs: Array<{ key: ClipTab; label: string }> = [
@@ -59,14 +60,12 @@ const filteredClips = computed(() => {
         ? clips.value.filter((clip) => clip.favorite)
         : clips.value.filter((clip) => clip.kind === activeTab.value);
 
-  const byQuery = !normalizedQuery.value
+  return !normalizedQuery.value
     ? byTab
     : byTab.filter((clip) => {
         const haystacks = [clip.title, clip.preview, clip.text ?? '', clip.html ?? '', clip.source];
         return haystacks.some((value) => value.toLowerCase().includes(normalizedQuery.value));
       });
-
-  return [...byQuery].sort(compareClips);
 });
 
 const selectedClip = computed(
@@ -78,6 +77,18 @@ const favoriteCount = computed(() => clips.value.filter((clip) => clip.favorite)
 const fingerprint = (payload: ClipboardPayload) =>
   [payload.kind, payload.text ?? '', payload.html ?? '', payload.image_data_url ?? ''].join('::');
 
+const createClipId = (payload: ClipboardPayload) => {
+  const entropy = crypto.randomUUID();
+  return `${Date.now()}::${entropy}::${fingerprint(payload)}`;
+};
+
+const firstLine = (content: string, fallback: string) =>
+  content
+    .split('\n')
+    .map((line) => line.trim())
+    .find((line) => line.length > 0)
+    ?.slice(0, 48) ?? fallback;
+
 const ensureSelection = () => {
   if (!selectedClip.value && filteredClips.value[0]) {
     selectedId.value = filteredClips.value[0].id;
@@ -85,41 +96,46 @@ const ensureSelection = () => {
 };
 
 const pushClip = (payload: ClipboardPayload) => {
+  const nextItems: ClipItem[] = [];
+  const baseTimestamp = Date.now();
+  const groupId = payload.kind === 'html' && payload.text ? crypto.randomUUID() : null;
+
   if (payload.kind === 'html' && payload.text) {
-    const textId = fingerprint({ ...payload, kind: 'text', html: null });
-    if (!clips.value.some((clip) => clip.id === textId)) {
-      clips.value = [
-        {
-          ...payload,
-          id: textId,
-          kind: 'text',
-          html: null,
-          favorite: false,
-          pinned: false,
-          createdAt: new Date().toISOString(),
-        },
-        ...clips.value,
-      ];
-    }
-  }
-
-  const id = fingerprint(payload);
-  if (clips.value.some((clip) => clip.id === id)) return;
-
-  clips.value = [
-    {
-      ...payload,
-      id,
+    const plainText = payload.text;
+    const textPayload: ClipboardPayload = {
+      kind: 'text',
+      title: firstLine(plainText, 'Text clip'),
+      preview: plainText.replace(/\s+/g, ' ').slice(0, 180),
+      text: plainText,
+      html: null,
+      image_data_url: null,
+      source: 'NSPasteboardTypeString',
+    };
+    nextItems.push({
+      ...textPayload,
+      id: createClipId(textPayload),
       favorite: false,
       pinned: false,
-      createdAt: new Date().toISOString(),
-    },
-    ...clips.value,
-  ]
+      groupId,
+      createdAt: new Date(baseTimestamp).toISOString(),
+    });
+  }
+
+  const mainId = createClipId(payload);
+  nextItems.push({
+    ...payload,
+    id: mainId,
+    favorite: false,
+    pinned: false,
+    groupId,
+    createdAt: new Date(baseTimestamp + 1).toISOString(),
+  });
+
+  clips.value = [...nextItems, ...clips.value]
     .slice(0, 100)
     .sort(compareClips);
 
-  selectedId.value = id;
+  selectedId.value = mainId;
   ensureSelection();
 };
 
@@ -190,13 +206,12 @@ const removeClip = (id: string) => {
 };
 
 watch(
-  filteredClips,
+  () => filteredClips.value.map((clip) => clip.id),
   (next) => {
-    if (!next.some((clip) => clip.id === selectedId.value)) {
-      selectedId.value = next[0]?.id ?? null;
+    if (!next.includes(selectedId.value ?? '')) {
+      selectedId.value = next[0] ?? null;
     }
   },
-  { deep: true },
 );
 
 watch(
