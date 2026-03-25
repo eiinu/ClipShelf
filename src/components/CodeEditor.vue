@@ -186,4 +186,32 @@ onBeforeUnmount(() => {
 :deep(.cm-editor) {
   height: 100%;
 }
+:deep(.cm-token-keyword) {
+  color: #7c3aed;
+  font-weight: 600;
+}
+:deep(.cm-token-string) {
+  color: #0f766e;
+}
+:deep(.cm-token-number) {
+  color: #b45309;
+}
+:deep(.cm-token-comment) {
+  color: #64748b;
+  font-style: italic;
+}
+:deep(.cm-token-property) {
+  color: #0369a1;
+}
+:deep(.cm-token-type) {
+  color: #0d9488;
+}
+:deep(.cm-token-heading) {
+  color: #1d4ed8;
+  font-weight: 700;
+}
+:deep(.cm-token-link) {
+  color: #2563eb;
+  text-decoration: underline;
+}
 </style>
