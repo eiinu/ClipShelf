@@ -65,7 +65,7 @@ watch(
     showToast.value = false;
     formattedCode.value = '';
     contentType.value = 'text';
-    selectedLanguage.value = props.clip?.kind === 'html' ? 'html' : 'plain';
+    selectedLanguage.value = 'plain';
   },
   { immediate: true },
 );
