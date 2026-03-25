@@ -81,6 +81,13 @@ const createClipId = (payload: ClipboardPayload) => {
   return `${Date.now()}::${entropy}::${fingerprint(payload)}`;
 };
 
+const firstLine = (content: string, fallback: string) =>
+  content
+    .split('\n')
+    .map((line) => line.trim())
+    .find((line) => line.length > 0)
+    ?.slice(0, 48) ?? fallback;
+
 const ensureSelection = () => {
   if (!selectedClip.value && filteredClips.value[0]) {
     selectedId.value = filteredClips.value[0].id;
@@ -92,11 +99,19 @@ const pushClip = (payload: ClipboardPayload) => {
   const baseTimestamp = Date.now();
 
   if (payload.kind === 'html' && payload.text) {
-    nextItems.push({
-      ...payload,
-      id: createClipId({ ...payload, kind: 'text', html: null }),
+    const plainText = payload.text;
+    const textPayload: ClipboardPayload = {
       kind: 'text',
+      title: firstLine(plainText, 'Text clip'),
+      preview: plainText.replace(/\s+/g, ' ').slice(0, 180),
+      text: plainText,
       html: null,
+      image_data_url: null,
+      source: 'NSPasteboardTypeString',
+    };
+    nextItems.push({
+      ...textPayload,
+      id: createClipId(textPayload),
       favorite: false,
       pinned: false,
       createdAt: new Date(baseTimestamp).toISOString(),

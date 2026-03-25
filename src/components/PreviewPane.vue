@@ -33,7 +33,6 @@ const selectedLanguage = ref<PreviewLanguage>('plain');
 const formattedCode = ref('');
 const toastMessage = ref('');
 const showToast = ref(false);
-const contentType = ref<'text' | 'html'>('text');
 
 const showToastMessage = (message: string) => {
   toastMessage.value = message;
@@ -48,8 +47,7 @@ const showToastMessage = (message: string) => {
 
 const sourceCode = computed(() => {
   if (!props.clip) return '';
-  if (props.clip.kind === 'html' && contentType.value === 'html') return props.clip.html ?? '';
-  if (props.clip.kind === 'html' && contentType.value === 'text' && props.clip.text) return props.clip.text;
+  if (props.clip.kind === 'html') return props.clip.html ?? '';
   if (props.clip.kind === 'text') return props.clip.text ?? '';
   return '';
 });
@@ -64,7 +62,6 @@ watch(
     toastMessage.value = '';
     showToast.value = false;
     formattedCode.value = '';
-    contentType.value = 'text';
     selectedLanguage.value = 'plain';
   },
   { immediate: true },
@@ -187,13 +184,6 @@ const copyContent = async () => {
             <label>
               <span>语言</span>
               <NSelect v-model:value="selectedLanguage" :options="languageOptions" />
-            </label>
-            <label v-if="clip && clip.kind === 'html' && clip.text">
-              <span>内容</span>
-              <select v-model="contentType">
-                <option value="text">文本</option>
-                <option value="html">HTML</option>
-              </select>
             </label>
           </div>
           <div class="action-buttons">
