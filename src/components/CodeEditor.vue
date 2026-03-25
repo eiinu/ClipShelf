@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
-import { EditorState, Extension } from '@codemirror/state';
+import { Compartment, EditorState, Extension } from '@codemirror/state';
 import { Decoration, EditorView, MatchDecorator, ViewPlugin } from '@codemirror/view';
 import { basicSetup } from 'codemirror';
 import { html } from '@codemirror/lang-html';
@@ -15,6 +15,7 @@ const props = defineProps<{
 
 const host = ref<HTMLDivElement | null>(null);
 let editorView: EditorView | null = null;
+const languageCompartment = new Compartment();
 
 const buildTokenDecorator = (regexp: RegExp, className: string): Extension => {
   const matcher = new MatchDecorator({
@@ -83,6 +84,7 @@ const languageExtension = computed<Extension[]>(() => {
 
 const extensions = computed(() => [
   basicSetup,
+  languageCompartment.of(languageExtension.value),
   EditorState.readOnly.of(true),
   EditorView.editable.of(false),
   EditorView.lineWrapping,
@@ -115,13 +117,12 @@ const extensions = computed(() => [
     '.cm-token-heading': { color: '#1d4ed8', fontWeight: '700' },
     '.cm-token-link': { color: '#2563eb', textDecoration: 'underline' },
   }),
-  ...languageExtension.value,
 ]);
 
 const mountEditor = () => {
   if (!host.value) return;
 
-  editorView?.destroy();
+  if (editorView) return;
   editorView = new EditorView({
     parent: host.value,
     state: EditorState.create({
@@ -131,7 +132,31 @@ const mountEditor = () => {
   });
 };
 
-watch(() => [props.modelValue, props.language] as const, mountEditor);
+watch(
+  () => props.modelValue,
+  (nextValue) => {
+    if (!editorView) return;
+    const currentValue = editorView.state.doc.toString();
+    if (currentValue === nextValue) return;
+    editorView.dispatch({
+      changes: {
+        from: 0,
+        to: editorView.state.doc.length,
+        insert: nextValue,
+      },
+    });
+  },
+);
+
+watch(
+  () => props.language,
+  () => {
+    if (!editorView) return;
+    editorView.dispatch({
+      effects: languageCompartment.reconfigure(languageExtension.value),
+    });
+  },
+);
 
 onMounted(mountEditor);
 

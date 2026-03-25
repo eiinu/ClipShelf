@@ -7,6 +7,7 @@ interface ClipItem {
   kind: 'text' | 'html' | 'image';
   favorite: boolean;
   createdAt: string;
+  groupId?: string | null;
   image_data_url?: string | null;
 }
 
@@ -58,6 +59,16 @@ const preloadImageSize = (item: ClipItem) => {
   img.src = item.image_data_url;
 };
 
+const isGroupedWithPrev = (index: number) =>
+  index > 0 &&
+  !!props.items[index].groupId &&
+  props.items[index - 1].groupId === props.items[index].groupId;
+
+const isGroupedWithNext = (index: number) =>
+  index < props.items.length - 1 &&
+  !!props.items[index].groupId &&
+  props.items[index + 1].groupId === props.items[index].groupId;
+
 watch(
   () => props.items,
   (items) => {
@@ -71,10 +82,14 @@ watch(
   <section class="panel">
     <div v-if="items.length" class="list">
       <article
-        v-for="item in items"
+        v-for="(item, index) in items"
         :key="item.id"
         class="row"
-        :class="{ active: selectedId === item.id }"
+        :class="{
+          active: selectedId === item.id,
+          'linked-prev': isGroupedWithPrev(index),
+          'linked-next': isGroupedWithNext(index),
+        }"
         @click="emit('select', item.id)"
       >
         <div class="content">
@@ -132,6 +147,7 @@ watch(
   overflow: auto;
 }
 .row {
+  position: relative;
   min-height: 68px;
   display: flex;
   align-items: center;
@@ -140,6 +156,28 @@ watch(
   padding: 10px;
   border-bottom: 1px solid #e2e8f0;
   cursor: pointer;
+}
+.row::before {
+  content: '';
+  position: absolute;
+  left: 4px;
+  width: 2px;
+  background: transparent;
+  border-radius: 999px;
+}
+.row.linked-prev::before {
+  top: -8px;
+  bottom: 50%;
+  background: #94a3b8;
+}
+.row.linked-next::before {
+  top: 50%;
+  bottom: -8px;
+  background: #94a3b8;
+}
+.row.linked-prev.linked-next::before {
+  top: -8px;
+  bottom: -8px;
 }
 .row:hover,
 .row.active {
