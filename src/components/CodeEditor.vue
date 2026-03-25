@@ -4,6 +4,7 @@ import { Compartment, EditorState, Extension } from '@codemirror/state';
 import { Decoration, EditorView, MatchDecorator, ViewPlugin } from '@codemirror/view';
 import { basicSetup } from 'codemirror';
 import { html } from '@codemirror/lang-html';
+import { javascript } from '@codemirror/lang-javascript';
 
 type EditorLanguage = 'plain' | 'html' | 'md' | 'json' | 'js' | 'ts' | 'xml';
 
@@ -14,7 +15,6 @@ const props = defineProps<{
 }>();
 
 const host = ref<HTMLDivElement | null>(null);
-const isCollapsed = ref(false);
 let editorView: EditorView | null = null;
 const languageCompartment = new Compartment();
 
@@ -54,30 +54,26 @@ const regexHighlightExtensions: Record<EditorLanguage, Extension[]> = {
     buildTokenDecorator(/\*\*[^*]+\*\*/g, 'cm-token-keyword'),
     buildTokenDecorator(/\[[^\]]+\]\([^\)]+\)/g, 'cm-token-link'),
   ],
-  json: [
-    buildTokenDecorator(/"(?:\\.|[^"\\])*"(?=\s*:)/g, 'cm-token-property'),
-    buildTokenDecorator(/"(?:\\.|[^"\\])*"/g, 'cm-token-string'),
-    buildTokenDecorator(/\b(?:true|false|null)\b/g, 'cm-token-keyword'),
-    buildTokenDecorator(/-?\b\d+(?:\.\d+)?(?:[eE][+-]?\d+)?\b/g, 'cm-token-number'),
-  ],
-  js: [
-    buildTokenDecorator(/\b(?:const|let|var|function|return|if|else|for|while|switch|case|break|class|new|import|from|export|default|await|async|try|catch|throw)\b/g, 'cm-token-keyword'),
-    buildTokenDecorator(/"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|`(?:\\.|[^`\\])*`/g, 'cm-token-string'),
-    buildTokenDecorator(/\b\d+(?:\.\d+)?\b/g, 'cm-token-number'),
-    buildTokenDecorator(/\/[/*][\s\S]*?(?:\*\/|$)|\/\/.*$/gm, 'cm-token-comment'),
-  ],
-  ts: [
-    buildTokenDecorator(/\b(?:const|let|var|function|return|if|else|for|while|switch|case|break|class|new|import|from|export|default|await|async|try|catch|throw|interface|type|implements|enum|readonly|public|private|protected)\b/g, 'cm-token-keyword'),
-    buildTokenDecorator(/\b(?:string|number|boolean|unknown|never|void|any)\b/g, 'cm-token-type'),
-    buildTokenDecorator(/"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|`(?:\\.|[^`\\])*`/g, 'cm-token-string'),
-    buildTokenDecorator(/\b\d+(?:\.\d+)?\b/g, 'cm-token-number'),
-    buildTokenDecorator(/\/[/*][\s\S]*?(?:\*\/|$)|\/\/.*$/gm, 'cm-token-comment'),
-  ],
+  json: [],
+  js: [],
+  ts: [],
 };
 
 const languageExtension = computed<Extension[]>(() => {
   if (props.language === 'html' || props.language === 'xml') {
     return [html()];
+  }
+
+  if (props.language === 'js') {
+    return [javascript()];
+  }
+
+  if (props.language === 'ts') {
+    return [javascript({ typescript: true })];
+  }
+
+  if (props.language === 'json') {
+    return [javascript()];
   }
 
   return regexHighlightExtensions[props.language] ?? [];
@@ -92,9 +88,8 @@ const extensions = computed(() => [
 ]);
 
 const mountEditor = () => {
-  if (!host.value) return;
+  if (!host.value || editorView) return;
 
-  if (editorView) return;
   editorView = new EditorView({
     parent: host.value,
     state: EditorState.create({
@@ -142,11 +137,8 @@ onBeforeUnmount(() => {
   <section class="editor-shell">
     <div class="toolbar">
       <span>{{ languageLabel }}</span>
-      <button type="button" class="fold-button" @click="isCollapsed = !isCollapsed">
-        {{ isCollapsed ? '展开' : '折叠' }}
-      </button>
     </div>
-    <div v-show="!isCollapsed" ref="host" class="editor-host" />
+    <div ref="host" class="editor-host" />
   </section>
 </template>
 
@@ -160,6 +152,7 @@ onBeforeUnmount(() => {
   border: 1px solid #e2e8f0;
   background: #f8fafc;
 }
+
 .toolbar {
   display: flex;
   justify-content: space-between;
@@ -170,46 +163,47 @@ onBeforeUnmount(() => {
   font-size: 13px;
   border-bottom: 1px solid #e2e8f0;
 }
-.fold-button {
-  border: 1px solid #cbd5e1;
-  border-radius: 4px;
-  padding: 2px 8px;
-  background: #ffffff;
-  color: #475569;
-  font-size: 12px;
-  cursor: pointer;
-}
+
 .editor-host {
   min-height: 0;
   height: 100%;
 }
+
 :deep(.cm-editor) {
   height: 100%;
 }
+
 :deep(.cm-token-keyword) {
   color: #7c3aed;
   font-weight: 600;
 }
+
 :deep(.cm-token-string) {
   color: #0f766e;
 }
+
 :deep(.cm-token-number) {
   color: #b45309;
 }
+
 :deep(.cm-token-comment) {
   color: #64748b;
   font-style: italic;
 }
+
 :deep(.cm-token-property) {
   color: #0369a1;
 }
+
 :deep(.cm-token-type) {
   color: #0d9488;
 }
+
 :deep(.cm-token-heading) {
   color: #1d4ed8;
   font-weight: 700;
 }
+
 :deep(.cm-token-link) {
   color: #2563eb;
   text-decoration: underline;
