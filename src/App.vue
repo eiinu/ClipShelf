@@ -24,6 +24,7 @@ interface ClipItem extends ClipboardPayload {
   createdAt: string;
   favorite: boolean;
   pinned: boolean;
+  groupId?: string | null;
 }
 
 const tabs: Array<{ key: ClipTab; label: string }> = [
@@ -97,6 +98,7 @@ const ensureSelection = () => {
 const pushClip = (payload: ClipboardPayload) => {
   const nextItems: ClipItem[] = [];
   const baseTimestamp = Date.now();
+  const groupId = payload.kind === 'html' && payload.text ? crypto.randomUUID() : null;
 
   if (payload.kind === 'html' && payload.text) {
     const plainText = payload.text;
@@ -114,6 +116,7 @@ const pushClip = (payload: ClipboardPayload) => {
       id: createClipId(textPayload),
       favorite: false,
       pinned: false,
+      groupId,
       createdAt: new Date(baseTimestamp).toISOString(),
     });
   }
@@ -124,6 +127,7 @@ const pushClip = (payload: ClipboardPayload) => {
     id: mainId,
     favorite: false,
     pinned: false,
+    groupId,
     createdAt: new Date(baseTimestamp + 1).toISOString(),
   });
 
