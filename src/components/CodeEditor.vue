@@ -88,35 +88,6 @@ const extensions = computed(() => [
   EditorState.readOnly.of(true),
   EditorView.editable.of(false),
   EditorView.lineWrapping,
-  EditorView.theme({
-    '&': {
-      height: '100%',
-      backgroundColor: 'transparent',
-      color: '#475569',
-      fontSize: '14px',
-    },
-    '.cm-scroller': {
-      overflow: 'auto',
-      fontFamily: "'SFMono-Regular', ui-monospace, monospace",
-      lineHeight: '1.6',
-    },
-    '.cm-content': {
-      padding: '14px',
-    },
-    '.cm-gutters': {
-      backgroundColor: '#f1f5f9',
-      color: '#94a3b8',
-      border: 'none',
-    },
-    '.cm-token-keyword': { color: '#7c3aed', fontWeight: '600' },
-    '.cm-token-string': { color: '#0f766e' },
-    '.cm-token-number': { color: '#b45309' },
-    '.cm-token-comment': { color: '#64748b', fontStyle: 'italic' },
-    '.cm-token-property': { color: '#0369a1' },
-    '.cm-token-type': { color: '#0d9488' },
-    '.cm-token-heading': { color: '#1d4ed8', fontWeight: '700' },
-    '.cm-token-link': { color: '#2563eb', textDecoration: 'underline' },
-  }),
 ]);
 
 const mountEditor = () => {

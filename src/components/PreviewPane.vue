@@ -183,7 +183,11 @@ const copyContent = async () => {
           <div class="language-controls">
             <label>
               <span>语言</span>
-              <NSelect v-model:value="selectedLanguage" :options="languageOptions" />
+              <NSelect
+                v-model:value="selectedLanguage"
+                class="language-select"
+                :options="languageOptions"
+              />
             </label>
           </div>
           <div class="action-buttons">
@@ -252,6 +256,20 @@ const copyContent = async () => {
   gap: 6px;
   color: #64748b;
   font-size: 12px;
+}
+
+
+.code-controls label span {
+  white-space: nowrap;
+}
+
+:deep(.language-select) {
+  width: 180px;
+  min-width: 180px;
+}
+
+:deep(.language-select .n-base-selection-label__render-label) {
+  max-width: none;
 }
 
 .code-controls select,
