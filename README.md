@@ -2,118 +2,106 @@
 
 Every clip has its place.
 
-## Demo scope
+ClipShelf 是一个基于 **Tauri 2 + Vue 3 + Rust** 的桌面端剪贴板管理 Demo，当前以 **macOS** 为主要目标平台。
 
-ClipShelf 是一个基于 **Tauri 2 + Vue 3 + Rust** 初始化的剪贴板管理 demo，当前目标是先跑通 **macOS** 桌面端体验：
+## 功能概览
 
-- 自动轮询系统剪贴板。
-- 识别并收集 **文本 / HTML / 图片（PNG）**。
-- 三列布局：左侧分类 Tab、中间历史列表、右侧详情预览。
-- 收藏视图。
-- 文本 / HTML 使用类 CodeMirror 风格预览编辑区，图片使用大图预览。
+- 自动监听系统剪贴板变化并记录历史。
+- 支持三类内容：**文本 / HTML / PNG 图片**。
+- 三栏界面：左侧分类、中间历史列表、右侧详情预览。
+- 支持收藏（Favorites）快速过滤。
+- 支持复制详情内容回系统剪贴板。
+- 常驻系统托盘，关闭主窗口后转为后台运行。
+- 历史数据持久化到本地 `clips.json`。
 
-## Project structure
+## 技术栈
+
+- **前端**：Vue 3 + TypeScript + Vite + Naive UI + CodeMirror 6
+- **桌面容器**：Tauri 2
+- **后端**：Rust
+- **平台能力**：macOS `NSPasteboard` 原生剪贴板读取
+
+## 项目结构
 
 ```text
 .
-├── .github/workflows/    # CI / DMG release pipeline
-├── src/                  # Vue UI
-└── src-tauri/            # Tauri + Rust backend
+├── src/                  # Vue 前端界面
+├── src-tauri/            # Tauri + Rust（命令、托盘、剪贴板监听）
+└── .github/workflows/    # CI 与 DMG 发布流水线
 ```
 
-## macOS clipboard strategy
+## 环境要求
 
-当前 demo 通过 Rust 调用 macOS 系统命令 `pbpaste` 轮询不同内容类型：
+- Node.js `>= 24`
+- pnpm `>= 10`
+- Rust（stable）
+- macOS（推荐，用于完整体验原生剪贴板监听）
 
-- `pbpaste -Prefer txt`
-- `pbpaste -Prefer html`
-- `pbpaste -Prefer png`
-
-前端按内容指纹去重，形成轻量级剪贴板历史。
-
-## Run locally
-
-> 当前执行环境无法访问 pnpm / crates registry，因此这里只完成了项目初始化与 demo 代码落盘。
-> 在正常联网环境下请先安装依赖再运行。
+## 本地开发
 
 ```bash
 corepack enable
 pnpm install
-cargo fetch --manifest-path src-tauri/Cargo.toml
 pnpm run tauri dev
 ```
 
-## Build and package
-
-本地构建与打包命令已经拆分完成：
+如果只想单独运行前端：
 
 ```bash
-corepack enable
-pnpm install
-pnpm run typecheck      # 仅做前端类型检查
-pnpm run build          # 前端 + Tauri 前置构建
-pnpm run build:desktop  # 构建桌面应用
-pnpm run bundle:dmg     # 仅生成 macOS DMG 安装包
+pnpm run dev
 ```
 
-`src-tauri/tauri.conf.json` 已将 bundle target 固定为 `dmg`，确保发布流程产物与 GitHub Release 保持一致。
-
-## GitHub Actions pipeline
-
-仓库内置了两条工作流：
-
-- `ci.yml`：在 push / pull request 时使用 Node.js 24 + pnpm 10 执行依赖安装、前端构建与 `cargo check`。
-- `release-dmg.yml`：在推送 `v*` tag，或手动触发 Actions 时，使用 Node.js 24 + pnpm 10 自动构建 macOS DMG，并上传到 GitHub Release。
-
-### 发布前准备
-
-1. 在 GitHub 仓库 `Settings > Actions > General > Workflow permissions` 中启用 **Read and write permissions**。
-2. 准备版本号，并同步更新以下文件中的版本：
-   - `package.json`
-   - `src-tauri/Cargo.toml`
-   - `src-tauri/tauri.conf.json`
-3. 如需 Apple 签名 / notarization，在 GitHub Secrets 中配置：
-   - `APPLE_CERTIFICATE`
-   - `APPLE_CERTIFICATE_PASSWORD`
-   - `APPLE_SIGNING_IDENTITY`
-   - `APPLE_ID`
-   - `APPLE_PASSWORD`
-   - `APPLE_TEAM_ID`
-
-> 若未配置上述 secrets，工作流仍会尝试生成 DMG；是否允许分发取决于你的 macOS 安全策略与签名要求。
-
-### 自动发布 DMG 到 GitHub Release
-
-推荐流程：
+## 常用脚本
 
 ```bash
-# 1. 更新版本号后提交代码
+pnpm run dev            # 启动 Vite 前端开发服务器
+pnpm run typecheck      # Vue + TS 类型检查
+pnpm run build:web      # 构建前端静态资源
+pnpm run build          # typecheck + build:web
+pnpm run build:desktop  # 构建桌面应用
+pnpm run bundle:dmg     # 构建 macOS DMG 安装包
+```
+
+## 数据持久化
+
+应用通过 Tauri 的应用数据目录保存历史记录文件：
+
+- 文件名：`clips.json`
+- 内容：包含剪贴板条目、收藏状态、时间戳等信息
+
+## 平台说明
+
+- **macOS**：启用原生剪贴板监听（`NSPasteboard`），可自动捕获文本、HTML、PNG。
+- **非 macOS**：当前版本会提示仅 macOS 启用原生监听（仍可启动 UI）。
+
+## 系统托盘行为
+
+- 点击窗口关闭按钮不会退出应用，而是隐藏到托盘。
+- 可通过托盘菜单「显示主窗口」恢复。
+- 可通过托盘菜单「退出 ClipShelf」彻底退出。
+
+## CI 与发布
+
+仓库内置两个 GitHub Actions 工作流：
+
+- `ci.yml`：在 push / pull request 执行前端构建与 Rust 检查。
+- `release-dmg.yml`：在 `v*` 标签推送或手动触发时构建并上传 DMG 到 GitHub Release。
+
+### 发布建议流程
+
+```bash
+# 1) 更新版本号并提交
 git add .
 git commit -m "release: v0.1.0"
 
-# 2. 打 tag 并推送
+# 2) 创建并推送标签
 git tag v0.1.0
 git push origin HEAD --tags
 ```
 
-完成后，`release-dmg.yml` 会：
+## 后续规划（Roadmap）
 
-1. 在 `macos-latest` runner 上安装 Node.js 与 Rust。
-2. 执行 `pnpm install`。
-3. 通过 `tauri-apps/tauri-action` 运行 `tauri build --bundles dmg`。
-4. 自动创建或更新 `v__VERSION__` 对应的 GitHub Release。
-5. 将生成的 `.dmg` 文件作为 Release Asset 上传。
-
-### 手动触发发布
-
-也可以在 GitHub Actions 页面手动执行 `release-dmg` 工作流：
-
-- `release_draft=true`：先生成草稿 Release，便于人工确认。
-- `prerelease=true`：将本次版本标记为预发布版本。
-
-## Next steps
-
-- 继续完善 macOS pasteboard API 方案，例如加入更丰富的类型识别与事件驱动监听。
-- 持久化存储已可用，后续可升级为 SQLite 以支持更复杂的查询与索引。
-- 继续增强 CodeMirror 预览体验，例如主题切换、语法高亮细分与只读工具栏。
-- 加入全局快捷键等功能，并继续完善搜索 / 置顶 / 状态栏交互体验。
+- 更丰富的内容类型识别（如 RTF、文件引用等）。
+- 搜索、置顶、批量操作等历史管理能力。
+- 更完善的编辑与预览体验（主题、语法高亮细分）。
+- 增强跨平台支持与差异化适配。
