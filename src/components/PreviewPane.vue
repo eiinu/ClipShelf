@@ -84,9 +84,10 @@ const formatCode = async () => {
       result = code;
     } else {
       // 动态导入 Prettier 及其解析器
-      const [prettier, parserBabel, parserHtml, parserMarkdown] = await Promise.all([
+      const [prettier, parserBabel, parserEstree, parserHtml, parserMarkdown] = await Promise.all([
         import('prettier'),
         import('prettier/parser-babel'),
+        import('prettier/plugins/estree'),
         import('prettier/parser-html'),
         import('prettier/parser-markdown')
       ]);
@@ -105,7 +106,7 @@ const formatCode = async () => {
         case 'json':
           result = await prettier.default.format(code, {
             parser: 'json',
-            plugins: [parserBabel.default],
+            plugins: [parserBabel.default, parserEstree.default],
             semi: false,
             tabWidth: 2,
             printWidth: 80
@@ -134,7 +135,7 @@ const formatCode = async () => {
         case 'js':
           result = await prettier.default.format(code, {
             parser: 'babel',
-            plugins: [parserBabel.default],
+            plugins: [parserBabel.default, parserEstree.default],
             semi: true,
             singleQuote: true,
             tabWidth: 2,
@@ -144,7 +145,7 @@ const formatCode = async () => {
         case 'ts':
           result = await prettier.default.format(code, {
             parser: 'typescript',
-            plugins: [parserBabel.default],
+            plugins: [parserBabel.default, parserEstree.default],
             semi: true,
             singleQuote: true,
             tabWidth: 2,
@@ -183,7 +184,11 @@ const copyContent = async () => {
           <div class="language-controls">
             <label>
               <span>语言</span>
-              <NSelect v-model:value="selectedLanguage" :options="languageOptions" />
+              <NSelect
+                v-model:value="selectedLanguage"
+                class="language-select"
+                :options="languageOptions"
+              />
             </label>
           </div>
           <div class="action-buttons">
@@ -252,6 +257,20 @@ const copyContent = async () => {
   gap: 6px;
   color: #64748b;
   font-size: 12px;
+}
+
+
+.code-controls label span {
+  white-space: nowrap;
+}
+
+:deep(.language-select) {
+  width: 180px;
+  min-width: 180px;
+}
+
+:deep(.language-select .n-base-selection-label__render-label) {
+  max-width: none;
 }
 
 .code-controls select,

@@ -14,6 +14,7 @@ const props = defineProps<{
 }>();
 
 const host = ref<HTMLDivElement | null>(null);
+const isCollapsed = ref(false);
 let editorView: EditorView | null = null;
 const languageCompartment = new Compartment();
 
@@ -88,35 +89,6 @@ const extensions = computed(() => [
   EditorState.readOnly.of(true),
   EditorView.editable.of(false),
   EditorView.lineWrapping,
-  EditorView.theme({
-    '&': {
-      height: '100%',
-      backgroundColor: 'transparent',
-      color: '#475569',
-      fontSize: '14px',
-    },
-    '.cm-scroller': {
-      overflow: 'auto',
-      fontFamily: "'SFMono-Regular', ui-monospace, monospace",
-      lineHeight: '1.6',
-    },
-    '.cm-content': {
-      padding: '14px',
-    },
-    '.cm-gutters': {
-      backgroundColor: '#f1f5f9',
-      color: '#94a3b8',
-      border: 'none',
-    },
-    '.cm-token-keyword': { color: '#7c3aed', fontWeight: '600' },
-    '.cm-token-string': { color: '#0f766e' },
-    '.cm-token-number': { color: '#b45309' },
-    '.cm-token-comment': { color: '#64748b', fontStyle: 'italic' },
-    '.cm-token-property': { color: '#0369a1' },
-    '.cm-token-type': { color: '#0d9488' },
-    '.cm-token-heading': { color: '#1d4ed8', fontWeight: '700' },
-    '.cm-token-link': { color: '#2563eb', textDecoration: 'underline' },
-  }),
 ]);
 
 const mountEditor = () => {
@@ -168,8 +140,13 @@ onBeforeUnmount(() => {
 
 <template>
   <section class="editor-shell">
-    <div class="toolbar">{{ languageLabel }}</div>
-    <div ref="host" class="editor-host" />
+    <div class="toolbar">
+      <span>{{ languageLabel }}</span>
+      <button type="button" class="fold-button" @click="isCollapsed = !isCollapsed">
+        {{ isCollapsed ? '展开' : '折叠' }}
+      </button>
+    </div>
+    <div v-show="!isCollapsed" ref="host" class="editor-host" />
   </section>
 </template>
 
@@ -184,11 +161,23 @@ onBeforeUnmount(() => {
   background: #f8fafc;
 }
 .toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   padding: 8px 12px;
   background: #f1f5f9;
   color: #64748b;
   font-size: 13px;
   border-bottom: 1px solid #e2e8f0;
+}
+.fold-button {
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  padding: 2px 8px;
+  background: #ffffff;
+  color: #475569;
+  font-size: 12px;
+  cursor: pointer;
 }
 .editor-host {
   min-height: 0;
@@ -196,5 +185,33 @@ onBeforeUnmount(() => {
 }
 :deep(.cm-editor) {
   height: 100%;
+}
+:deep(.cm-token-keyword) {
+  color: #7c3aed;
+  font-weight: 600;
+}
+:deep(.cm-token-string) {
+  color: #0f766e;
+}
+:deep(.cm-token-number) {
+  color: #b45309;
+}
+:deep(.cm-token-comment) {
+  color: #64748b;
+  font-style: italic;
+}
+:deep(.cm-token-property) {
+  color: #0369a1;
+}
+:deep(.cm-token-type) {
+  color: #0d9488;
+}
+:deep(.cm-token-heading) {
+  color: #1d4ed8;
+  font-weight: 700;
+}
+:deep(.cm-token-link) {
+  color: #2563eb;
+  text-decoration: underline;
 }
 </style>
