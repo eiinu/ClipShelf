@@ -14,6 +14,7 @@ const props = defineProps<{
 }>();
 
 const host = ref<HTMLDivElement | null>(null);
+const isCollapsed = ref(false);
 let editorView: EditorView | null = null;
 const languageCompartment = new Compartment();
 
@@ -139,8 +140,13 @@ onBeforeUnmount(() => {
 
 <template>
   <section class="editor-shell">
-    <div class="toolbar">{{ languageLabel }}</div>
-    <div ref="host" class="editor-host" />
+    <div class="toolbar">
+      <span>{{ languageLabel }}</span>
+      <button type="button" class="fold-button" @click="isCollapsed = !isCollapsed">
+        {{ isCollapsed ? '展开' : '折叠' }}
+      </button>
+    </div>
+    <div v-show="!isCollapsed" ref="host" class="editor-host" />
   </section>
 </template>
 
@@ -155,11 +161,23 @@ onBeforeUnmount(() => {
   background: #f8fafc;
 }
 .toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   padding: 8px 12px;
   background: #f1f5f9;
   color: #64748b;
   font-size: 13px;
   border-bottom: 1px solid #e2e8f0;
+}
+.fold-button {
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  padding: 2px 8px;
+  background: #ffffff;
+  color: #475569;
+  font-size: 12px;
+  cursor: pointer;
 }
 .editor-host {
   min-height: 0;

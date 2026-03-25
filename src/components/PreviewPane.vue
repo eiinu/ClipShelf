@@ -84,9 +84,10 @@ const formatCode = async () => {
       result = code;
     } else {
       // 动态导入 Prettier 及其解析器
-      const [prettier, parserBabel, parserHtml, parserMarkdown] = await Promise.all([
+      const [prettier, parserBabel, parserEstree, parserHtml, parserMarkdown] = await Promise.all([
         import('prettier'),
         import('prettier/parser-babel'),
+        import('prettier/plugins/estree'),
         import('prettier/parser-html'),
         import('prettier/parser-markdown')
       ]);
@@ -105,7 +106,7 @@ const formatCode = async () => {
         case 'json':
           result = await prettier.default.format(code, {
             parser: 'json',
-            plugins: [parserBabel.default],
+            plugins: [parserBabel.default, parserEstree.default],
             semi: false,
             tabWidth: 2,
             printWidth: 80
@@ -134,7 +135,7 @@ const formatCode = async () => {
         case 'js':
           result = await prettier.default.format(code, {
             parser: 'babel',
-            plugins: [parserBabel.default],
+            plugins: [parserBabel.default, parserEstree.default],
             semi: true,
             singleQuote: true,
             tabWidth: 2,
@@ -144,7 +145,7 @@ const formatCode = async () => {
         case 'ts':
           result = await prettier.default.format(code, {
             parser: 'typescript',
-            plugins: [parserBabel.default],
+            plugins: [parserBabel.default, parserEstree.default],
             semi: true,
             singleQuote: true,
             tabWidth: 2,
