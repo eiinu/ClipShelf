@@ -76,6 +76,11 @@ const favoriteCount = computed(() => clips.value.filter((clip) => clip.favorite)
 const fingerprint = (payload: ClipboardPayload) =>
   [payload.kind, payload.text ?? '', payload.html ?? '', payload.image_data_url ?? ''].join('::');
 
+const createClipId = (payload: ClipboardPayload) => {
+  const entropy = crypto.randomUUID();
+  return `${Date.now()}::${entropy}::${fingerprint(payload)}`;
+};
+
 const ensureSelection = () => {
   if (!selectedClip.value && filteredClips.value[0]) {
     selectedId.value = filteredClips.value[0].id;
@@ -83,41 +88,35 @@ const ensureSelection = () => {
 };
 
 const pushClip = (payload: ClipboardPayload) => {
+  const nextItems: ClipItem[] = [];
+  const baseTimestamp = Date.now();
+
   if (payload.kind === 'html' && payload.text) {
-    const textId = fingerprint({ ...payload, kind: 'text', html: null });
-    if (!clips.value.some((clip) => clip.id === textId)) {
-      clips.value = [
-        {
-          ...payload,
-          id: textId,
-          kind: 'text',
-          html: null,
-          favorite: false,
-          pinned: false,
-          createdAt: new Date().toISOString(),
-        },
-        ...clips.value,
-      ];
-    }
-  }
-
-  const id = fingerprint(payload);
-  if (clips.value.some((clip) => clip.id === id)) return;
-
-  clips.value = [
-    {
+    nextItems.push({
       ...payload,
-      id,
+      id: createClipId({ ...payload, kind: 'text', html: null }),
+      kind: 'text',
+      html: null,
       favorite: false,
       pinned: false,
-      createdAt: new Date().toISOString(),
-    },
-    ...clips.value,
-  ]
+      createdAt: new Date(baseTimestamp).toISOString(),
+    });
+  }
+
+  const mainId = createClipId(payload);
+  nextItems.push({
+    ...payload,
+    id: mainId,
+    favorite: false,
+    pinned: false,
+    createdAt: new Date(baseTimestamp + 1).toISOString(),
+  });
+
+  clips.value = [...nextItems, ...clips.value]
     .slice(0, 100)
     .sort(compareClips);
 
-  selectedId.value = id;
+  selectedId.value = mainId;
   ensureSelection();
 };
 
