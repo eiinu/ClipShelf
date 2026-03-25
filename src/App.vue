@@ -26,12 +26,12 @@ interface ClipItem extends ClipboardPayload {
   pinned: boolean;
 }
 
-const tabs: Array<{ key: ClipTab; label: string; emoji: string }> = [
-  { key: 'default', label: '全部', emoji: '⌘' },
-  { key: 'favorites', label: '收藏', emoji: '★' },
-  { key: 'text', label: '文本', emoji: 'T' },
-  { key: 'html', label: 'HTML', emoji: '</>' },
-  { key: 'image', label: '图片', emoji: '🖼' },
+const tabs: Array<{ key: ClipTab; label: string }> = [
+  { key: 'default', label: '全部' },
+  { key: 'favorites', label: '收藏' },
+  { key: 'text', label: '文本' },
+  { key: 'html', label: 'HTML' },
+  { key: 'image', label: '图片' },
 ];
 
 const activeTab = ref<ClipTab>('default');
@@ -73,7 +73,7 @@ const selectedClip = computed(
   () => filteredClips.value.find((clip) => clip.id === selectedId.value) ?? filteredClips.value[0] ?? null,
 );
 
-const pinnedCount = computed(() => clips.value.filter((clip) => clip.pinned).length);
+const favoriteCount = computed(() => clips.value.filter((clip) => clip.favorite).length);
 
 const fingerprint = (payload: ClipboardPayload) =>
   [payload.kind, payload.text ?? '', payload.html ?? '', payload.image_data_url ?? ''].join('::');
@@ -85,9 +85,7 @@ const ensureSelection = () => {
 };
 
 const pushClip = (payload: ClipboardPayload) => {
-  // 处理同时包含 text 和 html 的情况
   if (payload.kind === 'html' && payload.text) {
-    // 创建纯文本版本
     const textId = fingerprint({ ...payload, kind: 'text', html: null });
     if (!clips.value.some((clip) => clip.id === textId)) {
       clips.value = [
@@ -105,7 +103,6 @@ const pushClip = (payload: ClipboardPayload) => {
     }
   }
 
-  // 创建原始版本
   const id = fingerprint(payload);
   if (clips.value.some((clip) => clip.id === id)) return;
 
@@ -184,10 +181,12 @@ const toggleFavorite = (id: string) => {
   );
 };
 
-const togglePinned = (id: string) => {
-  clips.value = clips.value
-    .map((clip) => (clip.id === id ? { ...clip, pinned: !clip.pinned } : clip))
-    .sort(compareClips);
+const removeClip = (id: string) => {
+  clips.value = clips.value.filter((clip) => clip.id !== id);
+  if (selectedId.value === id) {
+    selectedId.value = null;
+    ensureSelection();
+  }
 };
 
 watch(
@@ -223,13 +222,10 @@ onBeforeUnmount(() => {
   <div class="app-frame">
     <main class="shell">
       <header class="topbar">
-        <h1>ClipShelf</h1>
-        <div class="toolbar-group">
-          <label class="search">
-            <input v-model="searchQuery" type="search" placeholder="搜索…" />
-          </label>
-          <div class="status">{{ clips.length }} / {{ pinnedCount }}</div>
-        </div>
+        <label class="search">
+          <input v-model="searchQuery" type="search" placeholder="搜索内容" />
+        </label>
+        <div class="status">{{ filteredClips.length }} / {{ favoriteCount }}</div>
       </header>
 
       <section class="layout">
@@ -239,7 +235,7 @@ onBeforeUnmount(() => {
           :selected-id="selectedClip?.id ?? null"
           @select="selectedId = $event"
           @toggle-favorite="toggleFavorite"
-          @toggle-pinned="togglePinned"
+          @remove="removeClip"
         />
         <PreviewPane :clip="selectedClip" />
       </section>
@@ -261,8 +257,8 @@ onBeforeUnmount(() => {
 }
 :global(body) {
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  background: #f8fafc;
-  color: #1e293b;
+  background: #fff;
+  color: #0f172a;
 }
 :global(button), :global(input), :global(textarea), :global(select) { font: inherit; }
 
@@ -270,95 +266,71 @@ onBeforeUnmount(() => {
   width: 100%;
   height: 100%;
   overflow: hidden;
-  display: flex;
-  justify-content: stretch;
 }
 .shell {
-  flex: 1;
   width: 100%;
-  min-width: 0;
-  min-height: 0;
   height: 100%;
-  padding: 14px;
   display: grid;
-  grid-template-rows: auto 1fr auto;
-  gap: 14px;
+  grid-template-rows: 38px 1fr auto;
   overflow: hidden;
 }
-.topbar,
-.footer,
-.layout > * {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-}
 .topbar {
-  padding: 14px 16px;
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  align-items: center;
-  gap: 16px;
-  flex-wrap: wrap;
-}
-.topbar h1 {
-  margin: 0;
-  font-size: 22px;
-  font-weight: 700;
-  color: #0f172a;
-}
-.toolbar-group {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+  gap: 8px;
+  padding: 4px 8px;
+  border-bottom: 1px solid #e2e8f0;
 }
 .search input {
-  width: clamp(180px, 22vw, 320px);
+  width: 190px;
   border: 1px solid #cbd5e1;
-  border-radius: 8px;
-  padding: 8px 10px;
+  border-radius: 4px;
+  padding: 4px 8px;
   outline: none;
-  background: #f8fafc;
+  background: #fff;
+  font-size: 13px;
 }
 .search input:focus {
   border-color: #64748b;
-  box-shadow: 0 0 0 3px rgba(100, 116, 139, 0.15);
 }
 .status {
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 12px;
   color: #64748b;
 }
 .layout {
   min-height: 0;
   display: grid;
-  grid-template-columns: 76px minmax(240px, 320px) minmax(0, 1fr);
-  gap: 14px;
+  grid-template-columns: 64px minmax(220px, 300px) minmax(0, 1fr);
 }
-
-@media (max-width: 1180px) {
-  .layout {
-    grid-template-columns: 70px minmax(220px, 280px) minmax(0, 1fr);
-  }
+.layout > * {
+  min-height: 0;
+  border-right: 1px solid #e2e8f0;
+}
+.layout > *:last-child {
+  border-right: none;
 }
 
 @media (max-width: 980px) {
-  .shell {
-    padding: 10px;
-    gap: 10px;
-  }
   .layout {
-    gap: 10px;
     grid-template-columns: 1fr;
-    grid-template-rows: auto minmax(220px, 38vh) 1fr;
+    grid-template-rows: auto minmax(180px, 36vh) 1fr;
+  }
+  .layout > * {
+    border-right: none;
+    border-bottom: 1px solid #e2e8f0;
+  }
+  .layout > *:last-child {
+    border-bottom: none;
   }
 }
 .footer {
-  padding: 10px 14px;
-  font-size: 13px;
+  padding: 6px 10px;
+  font-size: 12px;
+  border-top: 1px solid #fecaca;
 }
 .error {
   color: #b91c1c;
-  border-color: #fecaca;
   background: #fef2f2;
 }
 </style>

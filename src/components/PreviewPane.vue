@@ -225,9 +225,7 @@ const copyContent = async () => {
 
 <style scoped>
 .preview-panel {
-  padding: 14px;
-  display: grid;
-  grid-template-rows: 1fr;
+  padding: 8px;
   min-height: 0;
   position: relative;
 }
@@ -235,23 +233,26 @@ const copyContent = async () => {
 .code-container {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
   min-height: 0;
+  height: 100%;
 }
 
 .code-controls {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
   flex-wrap: wrap;
-  padding: 8px 0;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #e2e8f0;
 }
 
-.language-controls {
+.language-controls,
+.action-buttons {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
   flex-wrap: wrap;
 }
 
@@ -260,69 +261,57 @@ const copyContent = async () => {
   align-items: center;
   gap: 6px;
   color: #64748b;
-  font-size: 13px;
+  font-size: 12px;
 }
 
 .code-controls select,
 .code-controls button {
   border: 1px solid #cbd5e1;
-  border-radius: 8px;
+  border-radius: 4px;
   background: #fff;
   color: #334155;
-  padding: 6px 10px;
+  padding: 4px 8px;
+  font-size: 12px;
 }
 
 .code-controls button {
   cursor: pointer;
 }
 
-.code-controls button:hover {
-  background: #f8fafc;
-}
-
-.action-buttons {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
 .image-viewer,
 .empty-state {
   min-height: 0;
-  border-radius: 8px;
+  height: 100%;
   border: 1px solid #e2e8f0;
-  background: #f8fafc;
+  background: #fff;
 }
 .image-viewer {
   display: grid;
   place-items: center;
   overflow: hidden;
-  padding: 16px;
+  padding: 8px;
 }
 .image-viewer img {
   max-width: 100%;
   max-height: 100%;
   object-fit: contain;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 .empty-state {
   display: grid;
   place-items: center;
   color: #64748b;
-  font-size: 14px;
-  padding: 16px;
+  font-size: 12px;
 }
 
-/* Toast提示样式 */
 .toast {
   position: absolute;
-  bottom: 14px;
-  right: 14px;
+  bottom: 8px;
+  right: 8px;
   background: rgba(15, 23, 42, 0.8);
   color: white;
-  padding: 8px 16px;
-  border-radius: 8px;
-  font-size: 13px;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 12px;
   opacity: 0;
   transform: translateY(20px);
   transition: all 0.3s ease;
