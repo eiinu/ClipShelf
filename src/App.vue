@@ -5,11 +5,9 @@ import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 import SidebarTabs from './components/SidebarTabs.vue';
 import ClipList from './components/ClipList.vue';
 import PreviewPane from './components/PreviewPane.vue';
-import { OPENXML_REFERENCE, type OpenXmlEntry } from './data/openxmlReference';
 
 type ClipKind = 'text' | 'html' | 'image';
 type ClipTab = 'default' | 'favorites' | ClipKind;
-type AppMode = 'home' | 'search' | 'workspace';
 
 interface ClipboardPayload {
   kind: ClipKind;
@@ -40,15 +38,10 @@ const tabs: Array<{ key: ClipTab; label: string }> = [
 const activeTab = ref<ClipTab>('default');
 const clips = ref<ClipItem[]>([]);
 const selectedId = ref<string | null>(null);
-const appMode = ref<AppMode>('home');
 const listenerError = ref('');
 const storageError = ref('');
 const searchQuery = ref('');
-const homeQuery = ref('');
-const pickedFileName = ref('');
-const openxmlResults = ref<OpenXmlEntry[]>([]);
 const storageReady = ref(false);
-const uploadInput = ref<HTMLInputElement | null>(null);
 let unlistenClipboard: UnlistenFn | null = null;
 let unlistenError: UnlistenFn | null = null;
 const CLIP_RETENTION_DAYS = 7;
@@ -82,7 +75,6 @@ const selectedClip = computed(
 );
 
 const favoriteCount = computed(() => clips.value.filter((clip) => clip.favorite).length);
-const normalizedOpenXmlQuery = computed(() => homeQuery.value.trim().toLowerCase());
 
 const fingerprint = (payload: ClipboardPayload) =>
   [payload.kind, payload.text ?? '', payload.html ?? '', payload.image_data_url ?? ''].join('::');
@@ -225,35 +217,6 @@ const removeClip = (id: string) => {
   }
 };
 
-const runOpenXmlSearch = () => {
-  if (!normalizedOpenXmlQuery.value) return;
-  const keyword = normalizedOpenXmlQuery.value;
-  openxmlResults.value = OPENXML_REFERENCE.filter((entry) =>
-    [entry.label, entry.category, entry.path, entry.description, ...entry.attributes, ...entry.tags]
-      .join(' ')
-      .toLowerCase()
-      .includes(keyword),
-  );
-  appMode.value = 'search';
-};
-
-const backToHome = () => {
-  appMode.value = 'home';
-};
-
-const triggerUpload = () => {
-  uploadInput.value?.click();
-};
-
-const onFilePicked = (event: Event) => {
-  const target = event.target as HTMLInputElement;
-  const file = target.files?.[0];
-  if (!file) return;
-  pickedFileName.value = file.name;
-  appMode.value = 'workspace';
-  target.value = '';
-};
-
 watch(
   () => filteredClips.value.map((clip) => clip.id),
   (next) => {
@@ -284,60 +247,13 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="app-frame">
-    <main v-if="appMode === 'home'" class="home-shell">
-      <section class="home-card">
-        <h1>ClipShelf + OpenXML</h1>
-        <p class="home-subtitle">输入关键词查询 OpenXML 规范标签/属性，或上传文档进入预览工具。</p>
-        <div class="hero-actions">
-          <input
-            v-model="homeQuery"
-            type="search"
-            placeholder="例如：w:p、Relationship、r:embed"
-            @keydown.enter="runOpenXmlSearch"
-          />
-          <button class="btn-primary" @click="runOpenXmlSearch">查询规范</button>
-          <button class="btn-secondary" @click="triggerUpload">上传文档</button>
-          <input
-            ref="uploadInput"
-            class="hidden-upload"
-            type="file"
-            accept=".docx,.xlsx,.pptx"
-            @change="onFilePicked"
-          />
-        </div>
-      </section>
-    </main>
-
-    <main v-else-if="appMode === 'search'" class="search-shell">
-      <header class="search-header">
-        <button class="btn-link" @click="backToHome">← 返回主入口</button>
-        <div class="search-meta">关键词：{{ homeQuery }}，共 {{ openxmlResults.length }} 条</div>
-      </header>
-      <section class="result-list">
-        <article v-for="item in openxmlResults" :key="item.id" class="result-card">
-          <h3>{{ item.label }} <span>{{ item.category }}</span></h3>
-          <p>{{ item.description }}</p>
-          <p><strong>常见属性：</strong>{{ item.attributes.join('、') }}</p>
-          <p><strong>典型位置：</strong>{{ item.path }}</p>
-        </article>
-        <div v-if="!openxmlResults.length" class="empty-result">
-          没有匹配项，可以尝试标签名（如 w:r）、语义词（如 table）或属性名（如 Target）。
-        </div>
-      </section>
-    </main>
-
-    <main v-else class="shell">
+    <main class="shell">
       <header class="topbar">
         <label class="search">
           <input v-model="searchQuery" type="search" placeholder="搜索内容" />
         </label>
         <div class="status">{{ filteredClips.length }} / {{ favoriteCount }}</div>
       </header>
-
-      <section class="workspace-banner">
-        当前文件：{{ pickedFileName || '未指定（可继续作为现有工具使用）' }}
-        <button class="btn-link" @click="backToHome">返回主入口</button>
-      </section>
 
       <section class="layout">
         <SidebarTabs v-model="activeTab" :tabs="tabs" />
@@ -377,118 +293,13 @@ onBeforeUnmount(() => {
   width: 100%;
   height: 100%;
   overflow: hidden;
-  background: radial-gradient(circle at top, #f8fafc, #eef2ff 46%, #e2e8f0);
-}
-.home-shell,
-.search-shell {
-  width: 100%;
-  height: 100%;
-  display: grid;
-  place-items: center;
-  padding: 24px;
-}
-.home-card {
-  width: min(860px, 100%);
-  background: #ffffffdd;
-  border: 1px solid #dbeafe;
-  border-radius: 16px;
-  padding: 36px 28px;
-  box-shadow: 0 20px 40px #0f172a1c;
-}
-.home-card h1 {
-  margin: 0;
-  font-size: 30px;
-}
-.home-subtitle {
-  color: #475569;
-  margin: 8px 0 20px;
-}
-.hero-actions {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
-  gap: 10px;
-}
-.hero-actions input {
-  border: 1px solid #cbd5e1;
-  border-radius: 10px;
-  padding: 11px 12px;
-}
-.btn-primary,
-.btn-secondary {
-  border-radius: 10px;
-  padding: 0 14px;
-  border: none;
-  cursor: pointer;
-}
-.btn-primary {
-  background: #2563eb;
-  color: #fff;
-}
-.btn-secondary {
-  background: #e2e8f0;
-  color: #0f172a;
-}
-.hidden-upload {
-  display: none;
-}
-.search-shell {
-  grid-template-rows: auto minmax(0, 1fr);
-  place-items: stretch;
-}
-.search-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 8px 2px;
-}
-.result-list {
-  overflow: auto;
-  display: grid;
-  align-content: start;
-  gap: 12px;
-  padding-right: 2px;
-}
-.result-card {
-  background: #ffffffeb;
-  border: 1px solid #cbd5e1;
-  border-radius: 12px;
-  padding: 14px;
-}
-.result-card h3 {
-  margin: 0 0 8px;
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-.result-card h3 span {
-  font-size: 12px;
-  color: #475569;
-  font-weight: 500;
-}
-.result-card p {
-  margin: 4px 0;
-  color: #334155;
-}
-.empty-result {
-  text-align: center;
-  padding: 24px 12px;
-  color: #64748b;
-}
-.btn-link {
-  border: none;
-  background: transparent;
-  color: #2563eb;
-  cursor: pointer;
-  padding: 0;
 }
 .shell {
   width: 100%;
   height: 100%;
   display: grid;
-  grid-template-rows: 38px 34px 1fr auto;
+  grid-template-rows: 38px 1fr auto;
   overflow: hidden;
-  background: #fff;
 }
 .topbar {
   display: flex;
@@ -497,16 +308,6 @@ onBeforeUnmount(() => {
   gap: 8px;
   padding: 4px 8px;
   border-bottom: 1px solid #e2e8f0;
-}
-.workspace-banner {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 6px 10px;
-  font-size: 12px;
-  color: #475569;
-  border-bottom: 1px solid #e2e8f0;
-  background: #f8fafc;
 }
 .search input {
   width: 190px;
@@ -538,9 +339,6 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 980px) {
-  .hero-actions {
-    grid-template-columns: 1fr;
-  }
   .layout {
     grid-template-columns: 1fr;
     grid-template-rows: auto minmax(180px, 36vh) 1fr;
