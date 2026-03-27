@@ -44,6 +44,8 @@ const searchQuery = ref('');
 const storageReady = ref(false);
 let unlistenClipboard: UnlistenFn | null = null;
 let unlistenError: UnlistenFn | null = null;
+const CLIP_RETENTION_DAYS = 7;
+const CLIP_RETENTION_MS = CLIP_RETENTION_DAYS * 24 * 60 * 60 * 1000;
 
 const compareClips = (left: ClipItem, right: ClipItem) => {
   if (left.pinned !== right.pinned) return Number(right.pinned) - Number(left.pinned);
@@ -80,6 +82,14 @@ const fingerprint = (payload: ClipboardPayload) =>
 const createClipId = (payload: ClipboardPayload) => {
   const entropy = crypto.randomUUID();
   return `${Date.now()}::${entropy}::${fingerprint(payload)}`;
+};
+
+const pruneExpiredClips = (items: ClipItem[], now = Date.now()) => {
+  const cutoff = now - CLIP_RETENTION_MS;
+  return items.filter((clip) => {
+    const createdAt = new Date(clip.createdAt).getTime();
+    return Number.isNaN(createdAt) || createdAt >= cutoff;
+  });
 };
 
 const firstLine = (content: string, fallback: string) =>
@@ -131,9 +141,7 @@ const pushClip = (payload: ClipboardPayload) => {
     createdAt: new Date(baseTimestamp + 1).toISOString(),
   });
 
-  clips.value = [...nextItems, ...clips.value]
-    .slice(0, 100)
-    .sort(compareClips);
+  clips.value = [...nextItems, ...clips.value].sort(compareClips);
 
   selectedId.value = mainId;
   ensureSelection();
@@ -142,9 +150,13 @@ const pushClip = (payload: ClipboardPayload) => {
 const loadSavedClips = async () => {
   try {
     const saved = await invoke<ClipItem[]>('load_saved_clips');
-    clips.value = [...saved].sort(compareClips);
+    const pruned = pruneExpiredClips(saved);
+    clips.value = [...pruned].sort(compareClips);
     selectedId.value = clips.value[0]?.id ?? null;
     storageError.value = '';
+    if (pruned.length !== saved.length) {
+      await saveClips(clips.value);
+    }
   } catch (error) {
     storageError.value = error instanceof Error ? error.message : String(error);
   } finally {
