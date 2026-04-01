@@ -7,7 +7,7 @@ import ClipList from './components/ClipList.vue';
 import PreviewPane from './components/PreviewPane.vue';
 
 type ClipKind = 'text' | 'html' | 'image';
-type ClipTab = 'default' | 'favorites' | ClipKind;
+type ClipTab = 'default' | 'favorites' | ClipKind | `tag:${string}`;
 
 interface ClipboardPayload {
   kind: ClipKind;
@@ -25,9 +25,10 @@ interface ClipItem extends ClipboardPayload {
   favorite: boolean;
   pinned: boolean;
   groupId?: string | null;
+  tags?: string[];
 }
 
-const tabs: Array<{ key: ClipTab; label: string }> = [
+const baseTabs: Array<{ key: ClipTab; label: string }> = [
   { key: 'default', label: '全部' },
   { key: 'favorites', label: '收藏' },
   { key: 'text', label: '文本' },
@@ -54,13 +55,32 @@ const compareClips = (left: ClipItem, right: ClipItem) => {
 
 const normalizedQuery = computed(() => searchQuery.value.trim().toLowerCase());
 
+const normalizeTag = (tag: string) => tag.trim().replace(/\s+/g, ' ');
+
+const allTags = computed(() => {
+  const tags = new Set<string>();
+  clips.value.forEach((clip) => {
+    (clip.tags ?? []).forEach((tag) => {
+      if (tag) tags.add(tag);
+    });
+  });
+  return [...tags].sort((left, right) => left.localeCompare(right, 'zh-Hans-CN'));
+});
+
+const tabs = computed<Array<{ key: ClipTab; label: string }>>(() => [
+  ...baseTabs,
+  ...allTags.value.map((tag) => ({ key: `tag:${tag}` as ClipTab, label: tag })),
+]);
+
 const filteredClips = computed(() => {
   const byTab =
     activeTab.value === 'default'
       ? clips.value
       : activeTab.value === 'favorites'
         ? clips.value.filter((clip) => clip.favorite)
-        : clips.value.filter((clip) => clip.kind === activeTab.value);
+        : activeTab.value.startsWith('tag:')
+          ? clips.value.filter((clip) => (clip.tags ?? []).includes(activeTab.value.slice(4)))
+          : clips.value.filter((clip) => clip.kind === activeTab.value);
 
   return !normalizedQuery.value
     ? byTab
@@ -75,6 +95,7 @@ const selectedClip = computed(
 );
 
 const favoriteCount = computed(() => clips.value.filter((clip) => clip.favorite).length);
+const selectedClipTags = computed(() => selectedClip.value?.tags ?? []);
 
 const fingerprint = (payload: ClipboardPayload) =>
   [payload.kind, payload.text ?? '', payload.html ?? '', payload.image_data_url ?? ''].join('::');
@@ -127,6 +148,7 @@ const pushClip = (payload: ClipboardPayload) => {
       favorite: false,
       pinned: false,
       groupId,
+      tags: [],
       createdAt: new Date(baseTimestamp).toISOString(),
     });
   }
@@ -138,6 +160,7 @@ const pushClip = (payload: ClipboardPayload) => {
     favorite: false,
     pinned: false,
     groupId,
+    tags: [],
     createdAt: new Date(baseTimestamp + 1).toISOString(),
   });
 
@@ -209,6 +232,27 @@ const toggleFavorite = (id: string) => {
   );
 };
 
+const addTagToClip = (id: string, rawTag: string) => {
+  const tag = normalizeTag(rawTag);
+  if (!tag) return;
+
+  clips.value = clips.value.map((clip) => {
+    if (clip.id !== id) return clip;
+    const existing = new Set(clip.tags ?? []);
+    existing.add(tag);
+    return { ...clip, tags: [...existing] };
+  });
+};
+
+const removeTagFromClip = (id: string, tag: string) => {
+  clips.value = clips.value.map((clip) =>
+    clip.id === id ? { ...clip, tags: (clip.tags ?? []).filter((item) => item !== tag) } : clip,
+  );
+  if (activeTab.value === `tag:${tag}` && !clips.value.some((clip) => (clip.tags ?? []).includes(tag))) {
+    activeTab.value = 'default';
+  }
+};
+
 const removeClip = (id: string) => {
   clips.value = clips.value.filter((clip) => clip.id !== id);
   if (selectedId.value === id) {
@@ -224,6 +268,16 @@ watch(
       selectedId.value = next[0] ?? null;
     }
   },
+);
+
+watch(
+  tabs,
+  (nextTabs) => {
+    if (!nextTabs.some((tab) => tab.key === activeTab.value)) {
+      activeTab.value = 'default';
+    }
+  },
+  { immediate: true },
 );
 
 watch(
@@ -264,7 +318,13 @@ onBeforeUnmount(() => {
           @toggle-favorite="toggleFavorite"
           @remove="removeClip"
         />
-        <PreviewPane :clip="selectedClip" />
+        <PreviewPane
+          :clip="selectedClip"
+          :all-tags="allTags"
+          :clip-tags="selectedClipTags"
+          @add-tag="selectedClip && addTagToClip(selectedClip.id, $event)"
+          @remove-tag="selectedClip && removeTagFromClip(selectedClip.id, $event)"
+        />
       </section>
 
       <footer v-if="storageError || listenerError" class="footer error">{{ storageError || listenerError }}</footer>

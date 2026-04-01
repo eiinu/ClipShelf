@@ -31,15 +31,17 @@ const emit = defineEmits<{
 }
 .tab {
   width: 100%;
-  height: 34px;
-  padding: 0;
+  min-height: 34px;
+  padding: 6px 4px;
   border: none;
   border-bottom: 1px solid #e2e8f0;
   background: #fff;
   color: #64748b;
   cursor: pointer;
-  font-size: 12px;
+  font-size: 11px;
+  line-height: 1.2;
   text-align: center;
+  word-break: break-all;
 }
 .tab.active {
   color: #0f172a;

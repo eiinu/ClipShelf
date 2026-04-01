@@ -27,12 +27,20 @@ const languageOptions: Array<{ value: PreviewLanguage; label: string }> = [
 
 const props = defineProps<{
   clip: ClipItem | null;
+  allTags: string[];
+  clipTags: string[];
+}>();
+
+const emit = defineEmits<{
+  (e: 'add-tag', tag: string): void;
+  (e: 'remove-tag', tag: string): void;
 }>();
 
 const selectedLanguage = ref<PreviewLanguage>('plain');
 const formattedCode = ref('');
 const toastMessage = ref('');
 const showToast = ref(false);
+const tagInput = ref('');
 
 const showToastMessage = (message: string) => {
   toastMessage.value = message;
@@ -63,9 +71,17 @@ watch(
     showToast.value = false;
     formattedCode.value = '';
     selectedLanguage.value = 'plain';
+    tagInput.value = '';
   },
   { immediate: true },
 );
+
+const submitTagInput = () => {
+  const nextTag = tagInput.value.trim();
+  if (!nextTag) return;
+  emit('add-tag', nextTag);
+  tagInput.value = '';
+};
 
 const formatCode = async () => {
   if (!canOperateCode.value) return;
@@ -178,6 +194,35 @@ const copyContent = async () => {
 
 <template>
   <section class="preview-panel">
+    <div class="preview-toolbar">
+      <div class="tag-input-wrap">
+        <input
+          v-model="tagInput"
+          list="preview-tag-suggestions"
+          type="text"
+          placeholder="添加标签，例如：密码"
+          :disabled="!clip"
+          @keydown.enter.prevent="submitTagInput"
+        />
+        <button type="button" :disabled="!clip" @click="submitTagInput">添加</button>
+        <datalist id="preview-tag-suggestions">
+          <option v-for="tag in allTags" :key="tag" :value="tag" />
+        </datalist>
+      </div>
+      <div class="tag-list">
+        <button
+          v-for="tag in clipTags"
+          :key="tag"
+          class="tag-chip"
+          type="button"
+          @click="emit('remove-tag', tag)"
+        >
+          {{ tag }} ×
+        </button>
+        <span v-if="clip && !clipTags.length" class="tag-empty">未添加标签</span>
+      </div>
+    </div>
+
     <template v-if="clip">
       <div v-if="clip.kind !== 'image'" class="code-container">
         <div class="code-controls">
@@ -223,6 +268,68 @@ const copyContent = async () => {
   padding: 8px;
   min-height: 0;
   position: relative;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  gap: 8px;
+}
+
+.preview-toolbar {
+  display: grid;
+  gap: 6px;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 8px;
+}
+
+.tag-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tag-input-wrap input {
+  width: 240px;
+  max-width: 100%;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 12px;
+}
+
+.tag-input-wrap button {
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  border-radius: 4px;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.tag-input-wrap button:disabled,
+.tag-input-wrap input:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.tag-list {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.tag-chip {
+  border: none;
+  background: #e2e8f0;
+  color: #334155;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.tag-empty {
+  font-size: 12px;
+  color: #94a3b8;
 }
 
 .code-container {
