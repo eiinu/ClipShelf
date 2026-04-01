@@ -43,7 +43,6 @@ const listenerError = ref('');
 const storageError = ref('');
 const searchQuery = ref('');
 const storageReady = ref(false);
-const tagInput = ref('');
 let unlistenClipboard: UnlistenFn | null = null;
 let unlistenError: UnlistenFn | null = null;
 const CLIP_RETENTION_DAYS = 7;
@@ -243,7 +242,6 @@ const addTagToClip = (id: string, rawTag: string) => {
     existing.add(tag);
     return { ...clip, tags: [...existing] };
   });
-  tagInput.value = '';
 };
 
 const removeTagFromClip = (id: string, tag: string) => {
@@ -253,11 +251,6 @@ const removeTagFromClip = (id: string, tag: string) => {
   if (activeTab.value === `tag:${tag}` && !clips.value.some((clip) => (clip.tags ?? []).includes(tag))) {
     activeTab.value = 'default';
   }
-};
-
-const submitTagInput = () => {
-  if (!selectedClip.value) return;
-  addTagToClip(selectedClip.value.id, tagInput.value);
 };
 
 const removeClip = (id: string) => {
@@ -316,36 +309,6 @@ onBeforeUnmount(() => {
         <div class="status">{{ filteredClips.length }} / {{ favoriteCount }}</div>
       </header>
 
-      <section class="tag-editor">
-        <template v-if="selectedClip">
-          <div class="tag-input-wrap">
-            <input
-              v-model="tagInput"
-              list="tag-suggestions"
-              type="text"
-              placeholder="添加标签，例如：密码"
-              @keydown.enter.prevent="submitTagInput"
-            />
-            <button type="button" @click="submitTagInput">添加</button>
-            <datalist id="tag-suggestions">
-              <option v-for="tag in allTags" :key="tag" :value="tag" />
-            </datalist>
-          </div>
-          <div class="tag-list">
-            <button
-              v-for="tag in selectedClipTags"
-              :key="tag"
-              class="tag-chip"
-              type="button"
-              @click="removeTagFromClip(selectedClip.id, tag)"
-            >
-              {{ tag }} ×
-            </button>
-            <span v-if="!selectedClipTags.length" class="tag-empty">未添加标签</span>
-          </div>
-        </template>
-      </section>
-
       <section class="layout">
         <SidebarTabs v-model="activeTab" :tabs="tabs" />
         <ClipList
@@ -355,7 +318,13 @@ onBeforeUnmount(() => {
           @toggle-favorite="toggleFavorite"
           @remove="removeClip"
         />
-        <PreviewPane :clip="selectedClip" />
+        <PreviewPane
+          :clip="selectedClip"
+          :all-tags="allTags"
+          :clip-tags="selectedClipTags"
+          @add-tag="selectedClip && addTagToClip(selectedClip.id, $event)"
+          @remove-tag="selectedClip && removeTagFromClip(selectedClip.id, $event)"
+        />
       </section>
 
       <footer v-if="storageError || listenerError" class="footer error">{{ storageError || listenerError }}</footer>
@@ -389,7 +358,7 @@ onBeforeUnmount(() => {
   width: 100%;
   height: 100%;
   display: grid;
-  grid-template-rows: 38px auto 1fr auto;
+  grid-template-rows: 38px 1fr auto;
   overflow: hidden;
 }
 .topbar {
@@ -415,52 +384,6 @@ onBeforeUnmount(() => {
 .status {
   font-size: 12px;
   color: #64748b;
-}
-.tag-editor {
-  padding: 6px 8px;
-  border-bottom: 1px solid #e2e8f0;
-  display: grid;
-  gap: 6px;
-}
-.tag-input-wrap {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.tag-input-wrap input {
-  width: 240px;
-  max-width: 100%;
-  border: 1px solid #cbd5e1;
-  border-radius: 4px;
-  padding: 4px 8px;
-  font-size: 12px;
-}
-.tag-input-wrap button {
-  border: 1px solid #cbd5e1;
-  background: #fff;
-  border-radius: 4px;
-  padding: 4px 10px;
-  font-size: 12px;
-  cursor: pointer;
-}
-.tag-list {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-.tag-chip {
-  border: none;
-  background: #e2e8f0;
-  color: #334155;
-  border-radius: 999px;
-  padding: 2px 8px;
-  font-size: 11px;
-  cursor: pointer;
-}
-.tag-empty {
-  font-size: 12px;
-  color: #94a3b8;
 }
 .layout {
   min-height: 0;
