@@ -7,7 +7,7 @@ import ClipList from './components/ClipList.vue';
 import PreviewPane from './components/PreviewPane.vue';
 
 type ClipKind = 'text' | 'html' | 'image';
-type ClipTab = 'default' | 'favorites' | ClipKind;
+type ClipTab = 'default' | 'favorites' | ClipKind | `tag:${string}`;
 
 interface ClipboardPayload {
   kind: ClipKind;
@@ -25,9 +25,10 @@ interface ClipItem extends ClipboardPayload {
   favorite: boolean;
   pinned: boolean;
   groupId?: string | null;
+  tags?: string[];
 }
 
-const tabs: Array<{ key: ClipTab; label: string }> = [
+const baseTabs: Array<{ key: ClipTab; label: string }> = [
   { key: 'default', label: '全部' },
   { key: 'favorites', label: '收藏' },
   { key: 'text', label: '文本' },
@@ -42,6 +43,7 @@ const listenerError = ref('');
 const storageError = ref('');
 const searchQuery = ref('');
 const storageReady = ref(false);
+const tagInput = ref('');
 let unlistenClipboard: UnlistenFn | null = null;
 let unlistenError: UnlistenFn | null = null;
 const CLIP_RETENTION_DAYS = 7;
@@ -54,13 +56,32 @@ const compareClips = (left: ClipItem, right: ClipItem) => {
 
 const normalizedQuery = computed(() => searchQuery.value.trim().toLowerCase());
 
+const normalizeTag = (tag: string) => tag.trim().replace(/\s+/g, ' ');
+
+const allTags = computed(() => {
+  const tags = new Set<string>();
+  clips.value.forEach((clip) => {
+    (clip.tags ?? []).forEach((tag) => {
+      if (tag) tags.add(tag);
+    });
+  });
+  return [...tags].sort((left, right) => left.localeCompare(right, 'zh-Hans-CN'));
+});
+
+const tabs = computed<Array<{ key: ClipTab; label: string }>>(() => [
+  ...baseTabs,
+  ...allTags.value.map((tag) => ({ key: `tag:${tag}` as ClipTab, label: tag })),
+]);
+
 const filteredClips = computed(() => {
   const byTab =
     activeTab.value === 'default'
       ? clips.value
       : activeTab.value === 'favorites'
         ? clips.value.filter((clip) => clip.favorite)
-        : clips.value.filter((clip) => clip.kind === activeTab.value);
+        : activeTab.value.startsWith('tag:')
+          ? clips.value.filter((clip) => (clip.tags ?? []).includes(activeTab.value.slice(4)))
+          : clips.value.filter((clip) => clip.kind === activeTab.value);
 
   return !normalizedQuery.value
     ? byTab
@@ -75,6 +96,7 @@ const selectedClip = computed(
 );
 
 const favoriteCount = computed(() => clips.value.filter((clip) => clip.favorite).length);
+const selectedClipTags = computed(() => selectedClip.value?.tags ?? []);
 
 const fingerprint = (payload: ClipboardPayload) =>
   [payload.kind, payload.text ?? '', payload.html ?? '', payload.image_data_url ?? ''].join('::');
@@ -127,6 +149,7 @@ const pushClip = (payload: ClipboardPayload) => {
       favorite: false,
       pinned: false,
       groupId,
+      tags: [],
       createdAt: new Date(baseTimestamp).toISOString(),
     });
   }
@@ -138,6 +161,7 @@ const pushClip = (payload: ClipboardPayload) => {
     favorite: false,
     pinned: false,
     groupId,
+    tags: [],
     createdAt: new Date(baseTimestamp + 1).toISOString(),
   });
 
@@ -209,6 +233,33 @@ const toggleFavorite = (id: string) => {
   );
 };
 
+const addTagToClip = (id: string, rawTag: string) => {
+  const tag = normalizeTag(rawTag);
+  if (!tag) return;
+
+  clips.value = clips.value.map((clip) => {
+    if (clip.id !== id) return clip;
+    const existing = new Set(clip.tags ?? []);
+    existing.add(tag);
+    return { ...clip, tags: [...existing] };
+  });
+  tagInput.value = '';
+};
+
+const removeTagFromClip = (id: string, tag: string) => {
+  clips.value = clips.value.map((clip) =>
+    clip.id === id ? { ...clip, tags: (clip.tags ?? []).filter((item) => item !== tag) } : clip,
+  );
+  if (activeTab.value === `tag:${tag}` && !clips.value.some((clip) => (clip.tags ?? []).includes(tag))) {
+    activeTab.value = 'default';
+  }
+};
+
+const submitTagInput = () => {
+  if (!selectedClip.value) return;
+  addTagToClip(selectedClip.value.id, tagInput.value);
+};
+
 const removeClip = (id: string) => {
   clips.value = clips.value.filter((clip) => clip.id !== id);
   if (selectedId.value === id) {
@@ -224,6 +275,16 @@ watch(
       selectedId.value = next[0] ?? null;
     }
   },
+);
+
+watch(
+  tabs,
+  (nextTabs) => {
+    if (!nextTabs.some((tab) => tab.key === activeTab.value)) {
+      activeTab.value = 'default';
+    }
+  },
+  { immediate: true },
 );
 
 watch(
@@ -254,6 +315,36 @@ onBeforeUnmount(() => {
         </label>
         <div class="status">{{ filteredClips.length }} / {{ favoriteCount }}</div>
       </header>
+
+      <section class="tag-editor">
+        <template v-if="selectedClip">
+          <div class="tag-input-wrap">
+            <input
+              v-model="tagInput"
+              list="tag-suggestions"
+              type="text"
+              placeholder="添加标签，例如：密码"
+              @keydown.enter.prevent="submitTagInput"
+            />
+            <button type="button" @click="submitTagInput">添加</button>
+            <datalist id="tag-suggestions">
+              <option v-for="tag in allTags" :key="tag" :value="tag" />
+            </datalist>
+          </div>
+          <div class="tag-list">
+            <button
+              v-for="tag in selectedClipTags"
+              :key="tag"
+              class="tag-chip"
+              type="button"
+              @click="removeTagFromClip(selectedClip.id, tag)"
+            >
+              {{ tag }} ×
+            </button>
+            <span v-if="!selectedClipTags.length" class="tag-empty">未添加标签</span>
+          </div>
+        </template>
+      </section>
 
       <section class="layout">
         <SidebarTabs v-model="activeTab" :tabs="tabs" />
@@ -298,7 +389,7 @@ onBeforeUnmount(() => {
   width: 100%;
   height: 100%;
   display: grid;
-  grid-template-rows: 38px 1fr auto;
+  grid-template-rows: 38px auto 1fr auto;
   overflow: hidden;
 }
 .topbar {
@@ -324,6 +415,52 @@ onBeforeUnmount(() => {
 .status {
   font-size: 12px;
   color: #64748b;
+}
+.tag-editor {
+  padding: 6px 8px;
+  border-bottom: 1px solid #e2e8f0;
+  display: grid;
+  gap: 6px;
+}
+.tag-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.tag-input-wrap input {
+  width: 240px;
+  max-width: 100%;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 12px;
+}
+.tag-input-wrap button {
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  border-radius: 4px;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.tag-list {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.tag-chip {
+  border: none;
+  background: #e2e8f0;
+  color: #334155;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 11px;
+  cursor: pointer;
+}
+.tag-empty {
+  font-size: 12px;
+  color: #94a3b8;
 }
 .layout {
   min-height: 0;

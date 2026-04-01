@@ -41,6 +41,8 @@ struct StoredClip {
     created_at: String,
     favorite: bool,
     pinned: bool,
+    #[serde(default)]
+    tags: Vec<String>,
 }
 
 #[derive(Default)]
