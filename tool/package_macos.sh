@@ -10,7 +10,7 @@ app=build/macos/Build/Products/Release/ClipShelf.app
 test -d "$app"
 binary="$app/Contents/MacOS/ClipShelf"
 # Do not label a single-architecture binary as universal.
-lipo -verify_arch arm64 x86_64 "$binary"
+lipo "$binary" -verify_arch arm64 x86_64
 
 output=dist/macos
 mkdir -p "$output"
@@ -33,4 +33,7 @@ after the first launch attempt. Approve it only if you trust this build's source
 
 Clipboard history is stored locally. The old clips.json file is left unchanged.
 NOTICE
-shasum -a 256 "$output/ClipShelf-macOS-universal.zip" "$output/ClipShelf-macOS-universal.dmg" > "$output/SHA256SUMS"
+(
+  cd "$output"
+  shasum -a 256 ClipShelf-macOS-universal.zip ClipShelf-macOS-universal.dmg > SHA256SUMS
+)
