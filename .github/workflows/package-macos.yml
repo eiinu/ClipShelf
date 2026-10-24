@@ -29,7 +29,21 @@ jobs:
       - run: flutter test --reporter expanded
       - run: flutter build macos --release
       - name: Verify and package application
-        run: bash tool/package_macos.sh
+        shell: bash
+        run: |
+          set -o pipefail
+          bash -x tool/package_macos.sh 2>&1 | tee macos-package.log
+      - name: Report packaging diagnostics
+        if: failure()
+        shell: bash
+        run: |
+          {
+            echo '### macOS packaging diagnostics'
+            echo '```text'
+            find build/macos/Build/Products/Release -maxdepth 2 -name '*.app' -print || true
+            if [ -f macos-package.log ]; then tail -150 macos-package.log; fi
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4
         with:
           name: ClipShelf-macOS-universal
