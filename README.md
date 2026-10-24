@@ -82,3 +82,18 @@ linux/ macos/ windows/  各平台标准 Flutter runner
 test/               状态、数据库事务、数据迁移、界面测试
 integration_test/   实际原生剪贴板集成测试
 ```
+
+## macOS 测试包
+
+专用的 Package macOS 工作流会在 macOS runner 上检查、测试、构建并生成通用架构包。在对应 Actions 运行页下载 ClipShelf-macOS-universal artifact，其中包含 DMG、ZIP、SHA256SUMS 和首次启动说明，保留 14 天。
+
+本地 macOS 也可执行：
+
+```bash
+flutter config --no-enable-macos-arm64-only
+flutter pub get --enforce-lockfile
+flutter build macos --release
+bash tool/package_macos.sh
+```
+
+脚本会检查主程序包含 arm64 和 x86_64，执行本地临时签名与签名完整性校验，再生成 dist/macos 下的包。此签名不包含 Developer ID 身份或 Apple 公证，首次打开可能需要在系统设置的“隐私与安全性”中确认来源。正式公开分发前仍需开发者签名和公证。
