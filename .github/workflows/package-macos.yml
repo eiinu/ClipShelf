@@ -1,0 +1,38 @@
+name: Package macOS
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [codex/flutter-macos-package]
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.8'
+          channel: stable
+          cache: true
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
+      - name: Configure universal desktop build
+        run: flutter config --no-enable-macos-arm64-only
+      - run: flutter pub get --enforce-lockfile
+      - run: flutter analyze
+      - run: flutter test --reporter expanded
+      - run: flutter build macos --release
+      - name: Verify and package application
+        run: bash tool/package_macos.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ClipShelf-macOS-universal
+          path: dist/macos/*
+          if-no-files-found: error
+          retention-days: 14

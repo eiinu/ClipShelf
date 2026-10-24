@@ -1,48 +1,53 @@
-name: ci
+name: Flutter desktop
 
 on:
   push:
-    branches:
-      - main
-      - master
-      - work
+    branches: [main, master, work]
   pull_request:
+  workflow_dispatch:
 
 jobs:
-  verify:
-    runs-on: ubuntu-22.04
-
+  desktop:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            target: linux
+          - os: macos-latest
+            target: macos
+          - os: windows-latest
+            target: windows
+    runs-on: ${{ matrix.os }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
         with:
-          node-version: 24
-
-      - name: Install Rust stable
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Rust cache
-        uses: swatinem/rust-cache@v2
-        with:
-          workspaces: |
-            src-tauri -> target
-
-      - name: Install Linux dependencies for Tauri
+          flutter-version: '3.47.8'
+          channel: stable
+          cache: true
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Linux desktop dependencies
+        if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
-
-      - name: Install frontend dependencies
-        run: pnpm install
-
-      - name: Verify frontend build
-        run: pnpm run build
-
-      - name: Verify Rust build graph
-        run: cargo check --manifest-path src-tauri/Cargo.toml
+          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev libayatana-appindicator3-dev libsqlite3-dev xvfb
+      - run: flutter pub get --enforce-lockfile
+      - run: dart format --output=none --set-exit-if-changed lib test integration_test
+      - run: flutter analyze
+      - run: flutter build ${{ matrix.target }} --release
+      - name: Make bundled SQLite available to Windows unit tests
+        if: runner.os == 'Windows'
+        shell: bash
+        run: echo "$GITHUB_WORKSPACE/build/windows/x64/runner/Release" >> "$GITHUB_PATH"
+      - run: flutter test --reporter expanded
+      - name: Native clipboard smoke test on X11
+        if: runner.os == 'Linux'
+        run: xvfb-run -a flutter test integration_test/clipboard_smoke_test.dart -d linux
+      - uses: actions/upload-artifact@v4
+        with:
+          name: clipshelf-${{ matrix.target }}
+          path: |
+            build/linux/x64/release/bundle/
+            build/macos/Build/Products/Release/*.app
+            build/windows/x64/runner/Release/
