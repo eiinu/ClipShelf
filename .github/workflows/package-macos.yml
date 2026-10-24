@@ -44,6 +44,13 @@ jobs:
             if [ -f macos-package.log ]; then tail -150 macos-package.log; fi
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('macos-package.log')
+          text = path.read_text()[-12000:] if path.exists() else 'No packaging log was produced.'
+          text = text.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
+          print(f'::error title=macOS packaging failure details::{text}')
+          PY
       - uses: actions/upload-artifact@v4
         with:
           name: ClipShelf-macOS-universal
