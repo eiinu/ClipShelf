@@ -85,7 +85,12 @@ integration_test/   实际原生剪贴板集成测试
 
 ## macOS 测试包
 
-专用的 Package macOS 工作流会在 macOS runner 上检查、测试、构建并生成通用架构包。在对应 Actions 运行页下载 ClipShelf-macOS-universal artifact，其中包含 DMG、ZIP、SHA256SUMS 和首次启动说明，保留 14 天。
+专用的 Package macOS 工作流先构建通用应用，再将主程序、Flutter 引擎、Dart AOT 和原生插件中的 Mach-O 二进制全部拆分为单架构，并重新签名。在对应 Actions 运行页按设备下载：
+
+- **ClipShelf-macOS-arm64**：Apple Silicon（M 系列）。
+- **ClipShelf-macOS-x86_64**：Intel Mac。
+
+每个 artifact 仅包含该架构的 DMG、SHA256SUMS 和首次启动说明，不再重复附带一份应用 ZIP。下载保留 14 天。
 
 本地 macOS 也可执行：
 
@@ -96,4 +101,4 @@ flutter build macos --release
 bash tool/package_macos.sh
 ```
 
-脚本会检查主程序包含 arm64 和 x86_64，执行本地临时签名与签名完整性校验，再生成 dist/macos 下的包。此签名不包含 Developer ID 身份或 Apple 公证，首次打开可能需要在系统设置的“隐私与安全性”中确认来源。正式公开分发前仍需开发者签名和公证。
+默认生成 dist/macos/arm64 和 dist/macos/x86_64 两个目录；也可传入 arm64 或 x86_64 只生成其中一种。原始通用应用保持不变。脚本逐个检查包内所有 Mach-O 只含目标架构，完成签名完整性与 DMG 校验。此签名不包含 Developer ID 身份或 Apple 公证，首次打开可能需要在系统设置的“隐私与安全性”中确认来源。正式公开分发前仍需开发者签名和公证。

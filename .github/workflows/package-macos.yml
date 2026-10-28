@@ -53,7 +53,13 @@ jobs:
           PY
       - uses: actions/upload-artifact@v4
         with:
-          name: ClipShelf-macOS-universal
-          path: dist/macos/*
+          name: ClipShelf-macOS-arm64
+          path: dist/macos/arm64/*
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ClipShelf-macOS-x86_64
+          path: dist/macos/x86_64/*
           if-no-files-found: error
           retention-days: 14
